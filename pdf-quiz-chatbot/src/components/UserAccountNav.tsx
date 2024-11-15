@@ -19,6 +19,12 @@ type Props = {
 };
 
 const UserAccountNav = ({ user }: Props) => {
+  const handleSignOut = async (event: React.MouseEvent) => {
+    event.preventDefault();
+    await signOut({ redirect: false }); // Logs out without redirect
+    setTimeout(() => window.location.reload(), 500); // Full reload to clear session
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
@@ -49,14 +55,11 @@ const UserAccountNav = ({ user }: Props) => {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          onSelect={(event) => {
-            event.preventDefault();
-            signOut().catch(console.error);
-          }}
+          onSelect={handleSignOut}
           className="text-red-600 cursor-pointer"
         >
           Sign out
-          <LogOut className="w-4 h-4 ml-2 " />
+          <LogOut className="w-4 h-4 ml-2" />
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

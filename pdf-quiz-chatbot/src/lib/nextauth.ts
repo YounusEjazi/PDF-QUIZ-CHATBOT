@@ -1,26 +1,15 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { type GetServerSidePropsContext } from "next";
-import {
-  getServerSession,
-  type NextAuthOptions,
-  type DefaultSession,
-} from "next-auth";
+import { type NextAuthOptions, getServerSession, DefaultSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/db";
 
+// Extend default session interface to include user ID
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
     } & DefaultSession["user"];
   }
-
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
 }
 
 declare module "next-auth/jwt" {
@@ -34,28 +23,6 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
-  callbacks: {
-    jwt: async ({ token }) => {
-      const db_user = await prisma.user.findFirst({
-        where: {
-          email: token?.email,
-        },
-      });
-      if (db_user) {
-        token.id = db_user.id;
-      }
-      return token;
-    },
-    session: ({ session, token }) => {
-      if (token) {
-        session.user.id = token.id;
-        session.user.name = token.name;
-        session.user.email = token.email;
-        session.user.image = token.picture;
-      }
-      return session;
-    },
-  },
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
@@ -63,8 +30,36 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     }),
   ],
+  callbacks: {
+    // Populate JWT with user ID from the database
+    jwt: async ({ token }) => {
+      if (!token.id) {
+        const user = await prisma.user.findUnique({
+          where: { email: token.email || undefined },
+        });
+        if (user) {
+          token.id = user.id;
+        }
+      }
+      return token;
+    },
+    // Add user ID to session data
+    session: async ({ session, token }) => {
+      if (token) {
+        session.user = {
+          ...session.user,
+          id: token.id,
+        };
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: "/auth/signin", // Custom sign-in page route
+  },
 };
 
-export const getAuthSession = () => {
+// Export utility for getting the current session in server components
+export const getAuthSession = async () => {
   return getServerSession(authOptions);
 };
