@@ -5,13 +5,13 @@ FROM node:23
 WORKDIR /app
 
 # Copy package.json and package-lock.json to the container
-COPY package*.json ./ 
+COPY package*.json ./
 
 # Install dependencies
 # RUN npm install --legacy-peer-deps
 
 # Copy the rest of the application code to the container
-COPY . . 
+COPY . .
 
 # Expose the port Next.js will run on
 EXPOSE 3000

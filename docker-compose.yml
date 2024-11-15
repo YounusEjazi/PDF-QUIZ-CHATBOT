@@ -7,16 +7,11 @@ services:
       dockerfile: Dockerfile    # Use the Dockerfile at the root of the project
     ports:
       - "3000:3000"            # Map container port 3000 to local port 3000
-    environment:
-      # Explicitly refer to the environment variables from the mounted .env files
-      DATABASE_URL: ${DATABASE_URL}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+    env_file:
+      - ./pdf-quiz-chatbot/.env
+      - ./pdf-quiz-chatbot/.env.local
     volumes:
       - ./pdf-quiz-chatbot:/app  # Mount the pdf-quiz-chatbot folder to /app inside the container
-      - ./pdf-quiz-chatbot/.env:/app/.env  # Mount the .env file into the container
-      - ./pdf-quiz-chatbot/.env.local:/app/.env.local  # Mount the .env.local file into the container
-      - ./docker:/docker  # Mount the docker folder into the container to access the startup.sh script
+      - ./docker:/docker         # Mount the docker folder to access startup.sh
     working_dir: /app
     command: /docker/startup.sh  # Correct path to startup.sh script inside the container
