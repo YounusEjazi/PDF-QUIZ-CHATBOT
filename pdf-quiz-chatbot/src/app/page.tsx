@@ -1,47 +1,55 @@
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle"; // Adjust the import path if necessary
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   return (
-    <div className="min-h-screen p-6">
-      <h1 className="text-4xl font-bold text-center mb-6 text-gray-800">
-        Dashboard
-      </h1>
-
-      {/* Add ThemeToggle button */}
+    <div
+      className="min-h-screen flex items-center justify-center relative bg-cover bg-center"
+      style={{
+        backgroundImage: "url('/hintergrund.jpg')",
+      }}
+    >
+      {/* ThemeToggle button */}
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
-      {/* Dashboard content */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Quiz Card */}
-        <div className="bg-white shadow-lg rounded-lg p-6 flex flex-col items-center justify-between">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4">Quiz</h2>
-          <p className="text-gray-600 mb-4">
-            Manage your quiz settings and results here.
-          </p>
-          <Button className="w-full">Go to Quiz</Button>
-        </div>
+      <div className="w-full max-w-4xl mx-auto p-6 bg-white bg-opacity-40 hover:bg-opacity-80 shadow-lg rounded-lg transition-all duration-300">
+        <h1 className="text-4xl font-bold text-center mb-6 text-gray-800">
+          Dashboard
+        </h1>
 
-        {/* Chatbot Card */}
-        <div className="bg-white shadow-lg rounded-lg p-6 flex flex-col items-center justify-between">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4">Chatbot</h2>
-          <p className="text-gray-600 mb-4">
-            Chat with users and manage conversations.
-          </p>
-          <Button className="w-full">Go to Chatbot</Button>
-        </div>
+        {/* Dashboard content */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Quiz Card */}
+          <div className="group relative bg-gray-50 shadow rounded-lg p-6 flex flex-col items-center justify-between opacity-40 transform transition-all duration-300 hover:opacity-100 hover:scale-110 hover:rounded-full hover:shadow-2xl">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Quiz</h2>
+            <p className="text-gray-600 mb-4">
+              Manage your quiz settings and results here.
+            </p>
+            <Button className="w-full">Go to Quiz</Button>
+          </div>
 
-        {/* Profile Card */}
-        <div className="bg-white shadow-lg rounded-lg p-6 flex flex-col items-center justify-between">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4">Profile</h2>
-          <p className="text-gray-600 mb-4">
-            View and update your profile information.
-          </p>
-          <Button className="w-full">Go to Profile</Button>
+          {/* Chatbot Card */}
+          <div className="group relative bg-gray-50 shadow rounded-lg p-6 flex flex-col items-center justify-between opacity-40 transform transition-all duration-300 hover:opacity-100 hover:scale-110 hover:rounded-full hover:shadow-2xl">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Chatbot</h2>
+            <p className="text-gray-600 mb-4">
+              Chat with users and manage conversations.
+            </p>
+            <Button className="w-full">Go to Chatbot</Button>
+          </div>
+
+          {/* Profile Card */}
+          <div className="group relative bg-gray-50 shadow rounded-lg p-6 flex flex-col items-center justify-between opacity-40 transform transition-all duration-300 hover:opacity-100 hover:scale-110 hover:rounded-full hover:shadow-2xl">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Profile</h2>
+            <p className="text-gray-600 mb-4">
+              View and update your profile information.
+            </p>
+            <Button className="w-full">Go to Profile</Button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
