@@ -1,56 +1,63 @@
-"use client"; // Markiere die Komponente als Client Component
-import Link from "next/link";
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 
 const Navbar = () => {
-  const buttonStyles = `
-    w-full text-white px-4 py-2 rounded-lg shadow-md transition-transform transform hover:scale-120
-  `;
+  const [isLoginMenuOpen, setIsLoginMenuOpen] = useState(false);
+
+  const toggleLoginMenu = () => {
+    setIsLoginMenuOpen((prev) => !prev);
+  };
 
   return (
     <div className="fixed inset-x-0 top-0 bg-white dark:bg-gray-950 z-[10] h-fit border-b border-zinc-300 py-4 shadow-lg">
       <div className="flex items-center justify-between h-full px-8 mx-auto max-w-7xl">
-        {/* Logo */}  
-        <Link href={"/"} className="flex items-center gap-2">
-          <img
-            src="/uniLogo.png.jpg"// Ersetze diesen Pfad mit deinem Bildpfad
-            alt="Logo"
-            className="w-12 h-12 rounded-full shadow-lg"
-          />
-        </Link>
-
         {/* Titel in der Mitte */}
-        <h1 className="text-xl font-bold text-black dark:text-white text-center transition-transform transform hover:scale-150">
-          PDF-Quiz-Chatbot
-        </h1>
+        <div
+          className="px-6 py-2 border-4 border-black rounded-lg skew-x-6 transition-transform transform hover:scale-110"
+          title="PDF-QUIZ-CHATBOT"
+        >
+          <h1 className="text-xl font-bold text-black dark:text-white text-center">
+            PDF-QUIZ-CHATBOT
+          </h1>
+        </div>
 
-        <div className="flex items-center justify-end">
-          <div className="flex flex-col gap-4 w-[200px]">
-            {/* Login mit Google */}
-            <button
-              onClick={() => signIn("google", { callbackUrl: "/" })}
-              className={`${buttonStyles} bg-red-500 hover:bg-red-600 transition-transform transform hover:scale-110`}
-            >
-              Login mit Google
-            </button>
+        {/* Buttons */}
+        <div className="flex items-center gap-4 relative">
+          {/* Login Button */}
+          <button
+            onClick={toggleLoginMenu}
+            className="px-4 py-2 text-white bg-black rounded-lg shadow hover:bg-gray-800 transition-transform transform hover:scale-110"
+          >
+            Login
+          </button>
 
-            {/* Login mit Email */}
-            <Link
-              href="/auth/signin-email"
-              className={`${buttonStyles} bg-blue-500 hover:bg-blue-600 text-center transition-transform transform hover:scale-110`}
-            >
-              Login mit Email
-            </Link>
+          {/* Dropdown-Menü für Login */}
+          {isLoginMenuOpen && (
+            <div className="absolute top-12 right-0 bg-white dark:bg-gray-900 p-4 rounded-lg shadow-lg w-64">
+              <button
+                onClick={() => signIn("google", { callbackUrl: "/" })}
+                className="block w-full px-4 py-2 text-white bg-gray-800 rounded-lg hover:bg-black transition-transform transform hover:scale-105 mb-2"
+              >
+                Login mit Google
+              </button>
+              <button
+                onClick={() => signIn("email", { callbackUrl: "/" })}
+                className="block w-full px-4 py-2 text-black bg-gray-200 rounded-lg hover:bg-gray-300 transition-transform transform hover:scale-105"
+              >
+                Login mit E-Mail
+              </button>
+            </div>
+          )}
 
-            {/* Registrieren */}
-            <Link
-              href="/auth/register"
-              className={`${buttonStyles} bg-green-500 hover:bg-green-600 text-center transition-transform transform hover:scale-110`}
-            >
+          {/* Registrieren Button */}
+          <Link href="/auth/register">
+            <button className="px-4 py-2 text-white bg-gray-800 rounded-lg shadow hover:bg-black transition-transform transform hover:scale-110">
               Registrieren
-            </Link>
-          </div>
+            </button>
+          </Link>
         </div>
       </div>
     </div>

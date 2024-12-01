@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
+import { useSearchParams } from "next/navigation";
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
@@ -41,21 +42,15 @@ export const authOptions = {
   ],
   session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
+    async redirect({ url, baseUrl }) {
+      // Beispielsweise, wenn der Benutzer eingeloggt ist
+      if (url === "/auth/login") {
+        return "/dashboard"; // Weiterleitung zum Dashboard
       }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.email = token.email;
-      }
-      return session;
+      return baseUrl; // Standard-Weiterleitung
     },
   },
+  
   pages: {
     signIn: "/auth/signin",
   },
