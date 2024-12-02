@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,6 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String    @id @default(cuid())
+  firstName     String?   // For manual registration
+  lastName      String?   // For manual registration
+  name          String?   // Optional, populated by Google or combined manually
+  email         String?   @unique
+  password      String?   // For manual registration
+  emailVerified DateTime?
+  image         String?
+  games         Game[]    // Relation to games
+  chats         Chat[]    // Relation to chats
+  accounts      Account[] // Relation to accounts
+  sessions      Session[] // Relation to sessions
+  isPro         Boolean   @default(false) // Subscription status
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
 
 model Account {
   id                String  @id @default(cuid())
@@ -43,17 +54,6 @@ model Session {
   @@index([userId])
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  games         Game[]
-  accounts      Account[]
-  sessions      Session[]
-}
-
 enum GameType {
   mcq
   open_ended
@@ -62,20 +62,16 @@ enum GameType {
 model Game {
   id          String     @id @default(cuid())
   userId      String
-  questions   Question[]
-  timeStarted DateTime
-  topic       String
-  timeEnded   DateTime?
-  gameType    GameType
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions   Question[] // Relation to questions
+  topic       String
+  gameType    GameType
+  timeStarted DateTime
+  timeEnded   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@index([userId])
-}
-
-model topic_count {
-  id    String @id @default(cuid())
-  topic String @unique
-  count Int
 }
 
 model Question {
@@ -83,23 +79,58 @@ model Question {
   question          String
   answer            String
   gameId            String
-  options           Json? // for mcq questions
-  percentageCorrect Float? // for open_ended questions
-  isCorrect         Boolean? // for mcq questions
+  game              Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  options           Json?    // For MCQ questions
+  percentageCorrect Float?   // For open-ended questions
+  isCorrect         Boolean? // For MCQ questions
   questionType      GameType
   userAnswer        String?
-
-  game Game @relation(fields: [gameId], references: [id])
+  createdAt         DateTime @default(now())
 
   @@index([gameId])
 }
 
+model topic_count {
+  id        String   @id @default(cuid())
+  topic     String   @unique
+  count     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
+model Chat {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pdfUrl    String?   // Optional URL for associated PDF
+  name      String?   // Name of the chat, references the first message content
+  messages  Message[] // Relation to messages
+  embeddings PDFEmbedding[] // Relation to embeddings (newly added)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
+  @@index([userId])
+}
 
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    String   // "user" or "bot"
+  content   String   // The message content
+  createdAt DateTime @default(now())
 
+  @@index([chatId])
+}
 
+model PDFEmbedding {
+  id         String   @id @default(cuid())
+  chatId     String   // Links to the chat that the embedding is associated with
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  pineconeId String   // ID of the vector in Pinecone
+  pdfUrl     String?  // URL of the PDF if applicable
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+  @@index([chatId])
+}

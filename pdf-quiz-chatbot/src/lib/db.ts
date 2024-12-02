@@ -1,11 +1,13 @@
 import { PrismaClient } from "@prisma/client";
+import { Pinecone } from "@pinecone-database/pinecone";
 import "server-only";
 
 declare global {
-  // eslint-disable-next-line no-var, no-unused-vars
   var cachedPrisma: PrismaClient;
+  var cachedPinecone: Pinecone;
 }
 
+// Initialize Prisma
 export let prisma: PrismaClient;
 if (process.env.NODE_ENV === "production") {
   prisma = new PrismaClient();
@@ -14,4 +16,17 @@ if (process.env.NODE_ENV === "production") {
     global.cachedPrisma = new PrismaClient();
   }
   prisma = global.cachedPrisma;
+}
+
+// Initialize Pinecone
+export let pinecone: Pinecone;
+if (!global.cachedPinecone) {
+  global.cachedPinecone = new Pinecone({
+    apiKey: process.env.PINECONE_API_KEY!,
+  });
+}
+pinecone = global.cachedPinecone;
+
+export async function getPineconeIndex(indexName: string) {
+  return pinecone.index(indexName);
 }

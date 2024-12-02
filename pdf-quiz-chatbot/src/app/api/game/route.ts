@@ -16,8 +16,12 @@ export async function POST(req: Request, res: Response) {
         }
       );
     }
+
     const body = await req.json();
-    const { topic, type, amount } = quizCreationSchema.parse(body);
+    const { topic, type, amount, language } = quizCreationSchema.extend({
+      language: z.enum(["english", "german"]),
+    }).parse(body); // Extend schema to include language
+
     const game = await prisma.game.create({
       data: {
         gameType: type,
@@ -26,6 +30,7 @@ export async function POST(req: Request, res: Response) {
         topic,
       },
     });
+
     await prisma.topic_count.upsert({
       where: {
         topic,
@@ -47,6 +52,7 @@ export async function POST(req: Request, res: Response) {
         amount,
         topic,
         type,
+        language, // Pass language to external API
       }
     );
 
@@ -60,7 +66,7 @@ export async function POST(req: Request, res: Response) {
       };
 
       const manyData = data.questions.map((question: mcqQuestion) => {
-        // mix up the options lol
+        // Mix up the options randomly
         const options = [
           question.option1,
           question.option2,

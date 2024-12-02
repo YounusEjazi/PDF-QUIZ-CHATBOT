@@ -31,35 +31,30 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    // Populate JWT with user ID from the database
-    jwt: async ({ token }) => {
-      if (!token.id) {
-        const user = await prisma.user.findUnique({
-          where: { email: token.email || undefined },
-        });
-        if (user) {
-          token.id = user.id;
-        }
+    jwt: async ({ token, user }) => {
+      if (user) {
+        token.id = user.id;
       }
       return token;
     },
-    // Add user ID to session data
     session: async ({ session, token }) => {
-      if (token) {
-        session.user = {
-          ...session.user,
-          id: token.id,
-        };
-      }
+      session.user = {
+        ...session.user,
+        id: token.id,
+      };
       return session;
+    },
+    redirect: async ({ url, baseUrl }) => {
+      // Redirect to dashboard after sign-in
+      return url.startsWith(baseUrl) ? url : `${baseUrl}/dashboard`;
     },
   },
   pages: {
-    signIn: "/auth/signin", // Custom sign-in page route
+    signIn: "/auth/signin",
+    newUser: "/auth/register", // Custom registration page
   },
 };
 
-// Export utility for getting the current session in server components
 export const getAuthSession = async () => {
   return getServerSession(authOptions);
 };

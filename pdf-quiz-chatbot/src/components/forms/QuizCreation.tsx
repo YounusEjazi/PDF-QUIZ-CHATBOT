@@ -29,6 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import LoadingQuestions from "../LoadingQuestions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
   topic: string;
@@ -41,9 +42,10 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
   const [showLoader, setShowLoader] = React.useState(false);
   const [finishedLoading, setFinishedLoading] = React.useState(false);
   const { toast } = useToast();
+  const [language, setLanguage] = React.useState("english");
   const { mutate: getQuestions, isLoading } = useMutation({
     mutationFn: async ({ amount, topic, type }: Input) => {
-      const response = await axios.post("/api/game", { amount, topic, type });
+      const response = await axios.post("/api/game", { amount, topic, type, language });
       return response.data;
     },
   });
@@ -63,13 +65,13 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
       onError: (error) => {
         setShowLoader(false);
         if (error instanceof AxiosError) {
-          if (error.response?.status === 500) {
-            toast({
-              title: "Error",
-              description: "Something went wrong. Please try again later.",
-              variant: "destructive",
-            });
-          }
+          const errorMessage =
+            error.response?.data?.error || "Something went wrong. Please try again.";
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
         }
       },
       onSuccess: ({ gameId }: { gameId: string }) => {
@@ -84,6 +86,7 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
       },
     });
   };
+
   form.watch();
 
   if (showLoader) {
@@ -110,8 +113,7 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
                       <Input placeholder="Enter a topic" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Please provide any topic you would like to be quizzed on
-                      here.
+                      Please provide any topic you would like to be quizzed on here.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -129,20 +131,35 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
                         type="number"
                         {...field}
                         onChange={(e) => {
-                          form.setValue("amount", parseInt(e.target.value));
+                          form.setValue("amount", parseInt(e.target.value, 10));
                         }}
                         min={1}
                         max={10}
                       />
                     </FormControl>
                     <FormDescription>
-                      You can choose how many questions you would like to be
-                      quizzed on here.
+                      You can choose how many questions you would like to be quizzed on here.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <FormItem>
+                <FormLabel>Quiz Language</FormLabel>
+                <Select onValueChange={setLanguage} defaultValue={language}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="english">English</SelectItem>
+                    <SelectItem value="german">German</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Choose the language of the quiz (English or German).
+                </FormDescription>
+              </FormItem>
 
               <div className="flex justify-between">
                 <Button

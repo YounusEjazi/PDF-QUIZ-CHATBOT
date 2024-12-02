@@ -1,11 +1,13 @@
+
 import DetailsDialog from "@/components/DetailsDialog";
 import HistoryCard from "@/components/dashboard/HistoryCard";
-import HotTopicsCard from "@/components/dashboard/ChatbotUI";
+import ChatbotUI from "@/components/dashboard/ChatbotUI";
 import QuizMeCard from "@/components/dashboard/QuizMeCard";
 import RecentActivityCard from "@/components/dashboard/RecentActivityCard";
 import { getAuthSession } from "@/lib/nextauth";
 import { redirect } from "next/navigation";
 import React from "react";
+import HotTopicsCard from "@/components/dashboard/HotTopicsCard";
 
 type Props = {};
 
@@ -32,7 +34,8 @@ const Dasboard = async (props: Props) => {
         <HistoryCard />
       </div>
       <div className="grid gap-4 mt-4 md:grid-cols-2 lg:grid-cols-7">
-        <HotTopicsCard />
+        <ChatbotUI />
+        <HotTopicsCard/>
         <RecentActivityCard />
       </div>
     </main>

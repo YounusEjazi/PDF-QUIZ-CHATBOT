@@ -11,6 +11,7 @@ import { getAuthSession } from "@/lib/nextauth";
 import { redirect } from "next/navigation";
 import HistoryComponent from "../HistoryComponent";
 import { prisma } from "@/lib/db";
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 
 type Props = {};
 
@@ -19,11 +20,13 @@ const RecentActivityCard = async (props: Props) => {
   if (!session?.user) {
     return redirect("/");
   }
+
   const games_count = await prisma.game.count({
     where: {
       userId: session.user.id,
     },
   });
+
   return (
     <Card className="col-span-4 lg:col-span-3">
       <CardHeader>
@@ -34,8 +37,11 @@ const RecentActivityCard = async (props: Props) => {
           You have played a total of {games_count} quizzes.
         </CardDescription>
       </CardHeader>
-      <CardContent className="max-h-[580px] overflow-scroll">
-        <HistoryComponent limit={10} userId={session.user.id} />
+      <CardContent className="h-[580px]">
+        {/* Wrap HistoryComponent in ScrollArea for sleek vertical scrolling */}
+        <ScrollArea className="h-full">
+          <HistoryComponent limit={10} userId={session.user.id} />
+        </ScrollArea>
       </CardContent>
     </Card>
   );

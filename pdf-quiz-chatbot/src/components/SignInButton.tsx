@@ -1,32 +1,65 @@
 "use client";
-import React from "react";
-import { Button } from "@/components/ui/button"; 
+
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
+import { ChevronDown } from "lucide-react";
+import Link from "next/link";
 
 type Props = { text: string };
 
 const SignInButton = ({ text }: Props) => {
-  const handleGoogleSignIn = () => {
-    // Open Google logout in a hidden window to clear previous sessions
-    const logoutWindow = window.open(
-      "https://accounts.google.com/logout",
-      "_blank",
-      "width=500,height=500"
-    );
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-    // After a brief delay, trigger the sign-in flow with account selection prompt
-    setTimeout(() => {
-      if (logoutWindow) {
-        logoutWindow.close();
-      }
-      signIn("google", { callbackUrl: "/", prompt: "select_account" });
-    }, 500); // Adjust timeout as necessary for reliable logout
+  const handleGoogleSignIn = () => {
+    signIn("google", { callbackUrl: "/", prompt: "select_account" });
+  };
+
+  const handleEmailSignIn = () => {
+    signIn("credentials", { callbackUrl: "/auth/signin" });
+  };
+
+  const toggleDropdown = () => {
+    setDropdownOpen((prev) => !prev);
   };
 
   return (
-    <Button onClick={handleGoogleSignIn} className="w-full">
-      {text}
-    </Button>
+    <div className="relative inline-block">
+      {/* Main Button with Black Shade */}
+      <Button
+        onClick={toggleDropdown}
+        className="flex items-center justify-between w-full px-4 py-2 text-sm font-medium bg-black text-white rounded-md hover:bg-gray-800 focus:outline-none focus:ring focus:ring-gray-500"
+      >
+        {text} <ChevronDown className="ml-2 h-4 w-4" />
+      </Button>
+
+      {/* Dropdown Menu */}
+      {dropdownOpen && (
+        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+          {/* Sign in with Google */}
+          <button
+            onClick={handleGoogleSignIn}
+            className="block px-4 py-2 text-left text-gray-800 hover:bg-gray-100 w-full"
+          >
+            Sign in with Google
+          </button>
+          {/* Sign in with Email */}
+          <button
+            onClick={handleEmailSignIn}
+            className="block px-4 py-2 text-left text-gray-800 hover:bg-gray-100 w-full"
+          >
+            Sign in with Email
+          </button>
+          {/* Register */}
+          <Link
+            href="/auth/register"
+            className="block px-4 py-2 text-left text-gray-800 hover:bg-gray-100 w-full"
+          >
+            Register
+          </Link>
+        </div>
+      )}
+    </div>
   );
 };
 
