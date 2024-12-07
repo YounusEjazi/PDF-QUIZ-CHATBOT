@@ -1,10 +1,9 @@
 import pdfParse from "pdf-parse";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 
 /**
- * Extract text from a PDF file.
- * @param fileBuffer - The file buffer of the PDF.
- * @returns Extracted text as a string.
+ * Extrahiert Text aus einer PDF-Datei.
+ * @param fileBuffer - Der Buffer der PDF-Datei.
+ * @returns Extrahierter Text als String.
  */
 export async function extractTextFromPDF(fileBuffer: Buffer): Promise<string> {
   const data = await pdfParse(fileBuffer);
@@ -12,17 +11,17 @@ export async function extractTextFromPDF(fileBuffer: Buffer): Promise<string> {
 }
 
 /**
- * Split text into smaller chunks for embedding generation.
- * @param text - The text to split.
- * @param chunkSize - Maximum size of each chunk (default: 1000).
- * @param chunkOverlap - Overlap between chunks (default: 200).
- * @returns Array of text chunks.
+ * Generiert Quizfragen basierend auf extrahiertem Text.
+ * @param text - Der Text, aus dem Fragen generiert werden.
+ * @param maxQuestions - Maximale Anzahl von Fragen (Standard: 5).
+ * @returns Array von Fragen.
  */
-export function splitTextIntoChunks(
+export function generateQuestionsFromText(
   text: string,
-  chunkSize: number = 1000,
-  chunkOverlap: number = 200
-): { text: string }[] {
-  const splitter = new RecursiveCharacterTextSplitter({ chunkSize, chunkOverlap });
-  return splitter.createDocuments([text]);
+  maxQuestions: number = 5
+): { question: string }[] {
+  const sentences = text.split(".").filter((s) => s.trim().length > 0);
+  return sentences.slice(0, maxQuestions).map((sentence, index) => ({
+    question: `What is the meaning of: "${sentence.trim()}"?`,
+  }));
 }

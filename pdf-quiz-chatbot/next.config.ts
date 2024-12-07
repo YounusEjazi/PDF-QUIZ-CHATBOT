@@ -10,6 +10,11 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   output: "standalone",
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb", // Erhöhe das Body-Limit auf 10 MB
+    },
+  },
 };
 
 module.exports = nextConfig;

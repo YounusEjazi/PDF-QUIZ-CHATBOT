@@ -1,5 +1,4 @@
 import React from "react";
-
 import { getAuthSession } from "@/lib/nextauth";
 import { redirect } from "next/navigation";
 import QuizCreation from "@/components/forms/QuizCreation";
@@ -10,9 +9,7 @@ export const metadata = {
 };
 
 interface Props {
-  searchParams: {
-    topic?: string;
-  };
+  searchParams: { topic?: string }; // Typisieren der `searchParams`
 }
 
 const Quiz = async ({ searchParams }: Props) => {
@@ -20,7 +17,11 @@ const Quiz = async ({ searchParams }: Props) => {
   if (!session?.user) {
     redirect("/");
   }
-  return <QuizCreation topic={searchParams.topic ?? ""} />;
+
+  // Asynchrone Verarbeitung und Abfrage von `searchParams`
+  const topic = searchParams?.topic ?? "";
+
+  return <QuizCreation topic={topic} />;
 };
 
 export default Quiz;
