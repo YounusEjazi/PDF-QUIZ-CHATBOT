@@ -1,47 +1,70 @@
 "use client";
 
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import { quizCreationSchema } from "@/schemas/forms/quiz";
+import React from "react";
 import { z } from "zod";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-
 import {
   Form,
+  FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
-  FormDescription,
   FormMessage,
 } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { BookOpen, CopyCheck, RefreshCw } from "lucide-react";
+import { Separator } from "../ui/separator";
+import axios, { AxiosError } from "axios";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "../../hooks/use-toast";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import LoadingQuestions from "../LoadingQuestions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Props = {
-  topic: string; // Props für die Komponente
+  topic: string;
+  toggleMode: () => void; // Add a prop for toggling modes
 };
 
-const QuizCreationSchema = z.object({
-  topic: z.string().optional(),
-  amount: z.number().min(1).max(10),
-  type: z.enum(["mcq", "open_ended"]),
-});
+type Input = z.infer<typeof quizCreationSchema>;
 
-type Input = z.infer<typeof QuizCreationSchema>;
-
-const QuizCreation = ({ topic: topicParam }: Props) => {
+const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
   const router = useRouter();
+  const [showLoader, setShowLoader] = React.useState(false);
+  const [finishedLoading, setFinishedLoading] = React.useState(false);
   const { toast } = useToast();
-  const [language, setLanguage] = useState("english");
-  const [file, setFile] = useState<File | null>(null);
+  const [language, setLanguage] = React.useState("english");
+  const { mutate: getQuestions, isLoading } = useMutation({
+    mutationFn: async ({ amount, topic, type }: Input) => {
+      const response = await axios.post("/api/game", {
+        amount,
+        topic,
+        type,
+        language,
+      });
+      return response.data;
+    },
+  });
 
   const form = useForm<Input>({
-    resolver: zodResolver(QuizCreationSchema),
+    resolver: zodResolver(quizCreationSchema),
     defaultValues: {
       topic: topicParam,
       type: "mcq",
@@ -49,70 +72,61 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-      form.setValue("topic", ""); // Lösche das Thema, wenn eine Datei hochgeladen wird
-    }
-  };
-
   const onSubmit = async (data: Input) => {
-    if (!file && !data.topic?.trim()) {
-      toast({
-        title: "Error",
-        description: "Please provide either a topic or upload a PDF file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const formData = new FormData();
-    if (file) {
-      formData.append("file", file);
-    } else {
-      formData.append("topic", data.topic ?? "");
-    }
-
-    formData.append("amount", data.amount.toString());
-    formData.append("type", data.type);
-    formData.append("language", language);
-
-    try {
-      const response = await axios.post(file ? "/api/quiz/upload" : "/api/game", formData, {
-        headers: {
-          "Content-Type": file ? "multipart/form-data" : "application/json",
-        },
-      });
-
-      const { questions, gameId } = response.data;
-
-      toast({
-        title: "Success",
-        description: "Quiz created successfully!",
-      });
-
-      router.push(`/play/${data.type}/${gameId}`);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "Error",
-        description: "Failed to create quiz. Please try again.",
-        variant: "destructive",
-      });
-    }
+    setShowLoader(true);
+    getQuestions(data, {
+      onError: (error) => {
+        setShowLoader(false);
+        if (error instanceof AxiosError) {
+          const errorMessage =
+            error.response?.data?.error || "Something went wrong. Please try again.";
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+      },
+      onSuccess: ({ gameId }: { gameId: string }) => {
+        setFinishedLoading(true);
+        setTimeout(() => {
+          if (form.getValues("type") === "mcq") {
+            router.push(`/play/mcq/${gameId}`);
+          } else if (form.getValues("type") === "open_ended") {
+            router.push(`/play/open-ended/${gameId}`);
+          }
+        }, 2000);
+      },
+    });
   };
+
+  form.watch();
+
+  if (showLoader) {
+    return <LoadingQuestions finished={finishedLoading} />;
+  }
 
   return (
     <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Quiz Creation</CardTitle>
-          <CardDescription>Choose a topic or upload a PDF file</CardDescription>
+        <CardHeader className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-2xl font-bold">Quiz Creation</CardTitle>
+            <CardDescription>Choose a topic</CardDescription>
+          </div>
+          {/* Switcher Button */}
+          <Button
+            variant="ghost"
+            onClick={toggleMode}
+            className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Switch Mode
+          </Button>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* Topic Input */}
               <FormField
                 control={form.control}
                 name="topic"
@@ -120,35 +134,15 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
                   <FormItem>
                     <FormLabel>Topic</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Enter a topic"
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setFile(null); // Lösche die Datei, wenn ein Thema eingegeben wird
-                        }}
-                        disabled={!!file}
-                      />
+                      <Input placeholder="Enter a topic" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Provide a topic or upload a PDF file. If a file is uploaded, this field will
-                      be ignored.
+                      Please provide any topic you would like to be quizzed on here.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {/* PDF Upload */}
-              <FormItem>
-                <FormLabel>Upload PDF</FormLabel>
-                <Input type="file" accept="application/pdf" onChange={handleFileChange} />
-                <FormDescription>
-                  Upload a PDF file to generate quiz questions. This will override the topic field.
-                </FormDescription>
-              </FormItem>
-
-              {/* Number of Questions */}
               <FormField
                 control={form.control}
                 name="amount"
@@ -157,20 +151,24 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
                     <FormLabel>Number of Questions</FormLabel>
                     <FormControl>
                       <Input
+                        placeholder="How many questions?"
                         type="number"
                         {...field}
+                        onChange={(e) => {
+                          form.setValue("amount", parseInt(e.target.value, 10));
+                        }}
                         min={1}
                         max={10}
-                        placeholder="How many questions?"
                       />
                     </FormControl>
-                    <FormDescription>Choose how many questions to generate.</FormDescription>
+                    <FormDescription>
+                      You can choose how many questions you would like to be quizzed on here.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Quiz Language */}
               <FormItem>
                 <FormLabel>Quiz Language</FormLabel>
                 <Select onValueChange={setLanguage} defaultValue={language}>
@@ -182,9 +180,41 @@ const QuizCreation = ({ topic: topicParam }: Props) => {
                     <SelectItem value="german">German</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormDescription>
+                  Choose the language of the quiz (English or German).
+                </FormDescription>
               </FormItem>
 
-              <Button type="submit">Submit</Button>
+              <div className="flex justify-between">
+                <Button
+                  variant={
+                    form.getValues("type") === "mcq" ? "default" : "secondary"
+                  }
+                  className="w-1/2 rounded-none rounded-l-lg"
+                  onClick={() => {
+                    form.setValue("type", "mcq");
+                  }}
+                  type="button"
+                >
+                  <CopyCheck className="w-4 h-4 mr-2" /> Multiple Choice
+                </Button>
+                <Separator orientation="vertical" />
+                <Button
+                  variant={
+                    form.getValues("type") === "open_ended"
+                      ? "default"
+                      : "secondary"
+                  }
+                  className="w-1/2 rounded-none rounded-r-lg"
+                  onClick={() => form.setValue("type", "open_ended")}
+                  type="button"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" /> Open Ended
+                </Button>
+              </div>
+              <Button disabled={isLoading} type="submit">
+                Submit
+              </Button>
             </form>
           </Form>
         </CardContent>

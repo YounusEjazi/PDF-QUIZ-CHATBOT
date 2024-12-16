@@ -28,5 +28,13 @@ if (!global.cachedPinecone) {
 pinecone = global.cachedPinecone;
 
 export async function getPineconeIndex(indexName: string) {
-  return pinecone.index(indexName);
+  if (!indexName) {
+    throw new Error("Index name is required to retrieve Pinecone index.");
+  }
+  try {
+    return pinecone.index(indexName);
+  } catch (error) {
+    console.error("Error retrieving Pinecone index:", error);
+    throw new Error("Failed to retrieve Pinecone index.");
+  }
 }
