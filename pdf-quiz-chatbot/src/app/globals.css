@@ -8,7 +8,7 @@ body {
   min-height: 100vh; /* Mindesthöhe für Vollbild */
   width: 100%;
   overflow-y: auto; /* Ermöglicht vertikales Scrollen */
-  background: url('/hintergrund2.webp') no-repeat center center fixed;
+
   background-size: cover; /* Passt das Bild an den Bildschirm an */
 }
 

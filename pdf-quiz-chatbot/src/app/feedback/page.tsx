@@ -31,10 +31,17 @@ const FeedbackPage = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
-      <h1 className="text-3xl font-bold mb-4">Feedback</h1>
+    <div
+      className="flex flex-col items-center justify-center min-h-screen p-4"
+      style={{
+        backgroundImage: `url('/feedback.jpg')`, // Pfad zu deinem Bild
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <h1 className="text-3xl font-bold text-white mb-4">Feedback</h1>
       {submitted ? (
-        <div className="text-green-600 text-center">
+        <div className="text-green-600 text-center bg-white p-4 rounded-lg shadow-lg">
           <p>Vielen Dank für Ihr Feedback! 🙌</p>
         </div>
       ) : (
