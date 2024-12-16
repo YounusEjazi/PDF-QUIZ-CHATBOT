@@ -21,7 +21,7 @@ export default async function Home() {
 
   return (
     <div
-      className="relative min-h-screen w-screen flex flex-col items-center justify-start bg-cover bg-center p-8 overflow-y-auto"
+      className="min-h-screen w-screen flex flex-col items-center justify-start bg-cover bg-center overflow-y-auto"
       style={{
         backgroundImage: `url('/hintergrund2.webp')`, // Stelle sicher, dass diese Datei existiert
         backgroundSize: "cover",
@@ -29,7 +29,7 @@ export default async function Home() {
       }}
     >
       {/* Begrüßung */}
-      <div className="text-center mb-12 flex flex-col items-center">
+      <div className="text-center mb-12 flex flex-col items-center p-8">
         <h1 className="text-5xl font-extrabold text-black mb-4 font-[cursive] flex items-center gap-4">
           Welcome to Quizzzy
           <span className="text-5xl">🔥</span> {/* Feuer-Icon */}
@@ -39,11 +39,11 @@ export default async function Home() {
       </div>
 
       {/* Feature Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-11/12 max-w-4xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-11/12 max-w-4xl mb-12">
         {features.map((feature, index) => (
           <Card
             key={index}
-            className="transition-all duration-300 transform bg-opacity-50 hover:bg-opacity-90 hover:scale-105"
+            className="transition-all duration-300 transform bg-opacity-50 hover:bg-opacity-90 hover:scale-105 !important"
           >
             <CardHeader>
               <CardTitle>{feature.title}</CardTitle>
