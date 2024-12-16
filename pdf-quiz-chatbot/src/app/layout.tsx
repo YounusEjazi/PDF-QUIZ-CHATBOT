@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Quizmify",
+  title: "PDF-QUIZ-CHATBOT",
   description: "Quiz yourself on anything!",
 };
 
@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className={cn(inter.className, "antialiased min-h-screen pt-16")}>
         <Providers>
           <Navbar />

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation"; // Import für Router
 import { signIn } from "next-auth/react";
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
@@ -10,13 +11,14 @@ type Props = { text: string };
 
 const SignInButton = ({ text }: Props) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const router = useRouter(); // Router-Objekt verwenden
 
   const handleGoogleSignIn = () => {
     signIn("google", { callbackUrl: "/", prompt: "select_account" });
   };
 
   const handleEmailSignIn = () => {
-    signIn("credentials", { callbackUrl: "/auth/signin" });
+    router.push("/auth/signin"); // Benutzer zur Login-Seite weiterleiten
   };
 
   const toggleDropdown = () => {

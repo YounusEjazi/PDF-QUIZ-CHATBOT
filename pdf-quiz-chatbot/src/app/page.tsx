@@ -2,47 +2,69 @@ import SignInButton from "@/components/SignInButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import WordCloud from "@/components/WordCloud";
+import { authOptions } from "@/lib/nextauth";
 
 export default async function Home() {
-  const session = await getServerSession();
-  
+  const session = await getServerSession(authOptions);
+
   // Redirect logged-in users to the dashboard
   if (session?.user) {
     redirect("/dashboard");
   }
 
-  // Static topics/services for the word cloud
-  const staticTopics = [
-    { text: "Uni Siegen Chatbot", value: 30 },
-    { text: "Learn with Quiz", value: 25 },
-    { text: "AI-Powered Quizzes", value: 20 },
-    { text: "PDF to Quiz Converter", value: 35 },
-    { text: "Interactive Chatbot", value: 15 },
-    { text: "AI Assistance", value: 10 },
+  const features = [
+    { title: "Interactive Chatbot", description: "Chat with an AI-powered assistant for instant help." },
+    { title: "AI Quizzes", description: "Generate quizzes powered by cutting-edge AI technology." },
+    { title: "PDF to Quiz", description: "Transform your PDFs into interactive quizzes effortlessly." },
+    { title: "Learn with Fun", description: "Make learning enjoyable with gamified quizzes and challenges." },
   ];
 
   return (
-    <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-      <Card className="w-[400px] p-4">
-        <CardHeader>
-          <CardTitle>Welcome to Quizzzy 🔥!</CardTitle>
-          <CardDescription>
-            Quizzzy is your platform for interactive learning! Explore our services:
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <WordCloud formattedTopics={staticTopics} />
-          <div className="mt-4">
-            <p className="text-center text-sm text-muted-foreground">
-              Click on a topic to learn more about our services.
-            </p>
-            <div className="mt-4 flex justify-center">
-              <SignInButton text="Sign In with Google" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div
+      className="relative min-h-screen w-screen flex flex-col items-center justify-start bg-cover bg-center p-8 overflow-y-auto"
+      style={{
+        backgroundImage: `url('/hintergrund2.webp')`, // Stelle sicher, dass diese Datei existiert
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      {/* Begrüßung */}
+      <div className="text-center mb-12 flex flex-col items-center">
+        <h1 className="text-5xl font-extrabold text-black mb-4 font-[cursive] flex items-center gap-4">
+          Welcome to Quizzzy
+          <span className="text-5xl">🔥</span> {/* Feuer-Icon */}
+          <span className="text-5xl animate-wobble">👋</span> {/* Rotierendes Händchen */}
+        </h1>
+        <p className="text-lg text-black">Discover how Quizzzy can transform your learning experience!</p>
+      </div>
+
+      {/* Feature Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-11/12 max-w-4xl">
+        {features.map((feature, index) => (
+          <Card
+            key={index}
+            className="transition-all duration-300 transform bg-opacity-50 hover:bg-opacity-90 hover:scale-105"
+          >
+            <CardHeader>
+              <CardTitle>{feature.title}</CardTitle>
+              <CardDescription>{feature.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Additional content here */}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Sign-In Button */}
+      <div className="mt-12">
+        <SignInButton text="Sign In with Google" />
+      </div>
+
+      {/* Footer */}
+      <footer className="mt-12 py-4 text-center text-sm text-gray-600">
+        © 2024 Quizzzy. All rights reserved.
+      </footer>
     </div>
   );
 }

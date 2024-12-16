@@ -2,8 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input"; // Adjust import path if necessary
-import { Button } from "@/components/ui/button"; // Adjust import path if necessary
 import axios from "axios";
 
 const RegisterPage = () => {
@@ -30,42 +28,44 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="p-8 bg-white shadow-md rounded-lg max-w-sm w-full"
-      >
-        <h2 className="text-2xl font-bold text-center mb-4">Register</h2>
-        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-        <Input
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h1 className="mb-4 text-2xl font-bold">Register</h1>
+      {error && <p className="text-red-500">{error}</p>}
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+        <input
+          type="text"
           name="name"
-          placeholder="Full Name"
+          placeholder="Name"
           value={formData.name}
           onChange={handleChange}
-          className="mb-4"
+          required
+          className="border p-2"
         />
-        <Input
+        <input
+          type="email"
           name="email"
           placeholder="Email"
-          type="email"
           value={formData.email}
           onChange={handleChange}
-          className="mb-4"
+          required
+          className="border p-2"
         />
-        <Input
+        <input
+          type="password"
           name="password"
           placeholder="Password"
-          type="password"
           value={formData.password}
           onChange={handleChange}
-          className="mb-4"
+          required
+          className="border p-2"
         />
-        <Button type="submit" className="w-full">
+        <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded">
           Register
-        </Button>
+        </button>
       </form>
     </div>
   );
 };
 
 export default RegisterPage;
+
