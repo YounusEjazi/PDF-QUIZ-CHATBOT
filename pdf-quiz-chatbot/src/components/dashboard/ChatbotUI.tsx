@@ -27,7 +27,7 @@ const ChatbotUI = () => {
 
   return (
     <Card
-      className="col-span-4 lg:col-span-8 hover:cursor-pointer hover:opacity-75"
+      className="hover:cursor-pointer hover:opacity-75"
       onClick={startNewChat}
     >
       <CardHeader>
