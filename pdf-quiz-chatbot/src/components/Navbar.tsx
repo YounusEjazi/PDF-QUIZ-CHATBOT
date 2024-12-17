@@ -26,6 +26,11 @@ const Navbar = async () => {
             className="rounded-md dark:brightness-0 dark:invert"
           />
           <ThemeToggle className="mr-4" />
+<<<<<<< Updated upstream
+=======
+
+          {/* Auth-Buttons */}
+>>>>>>> Stashed changes
           {session?.user ? (
             <UserAccountNav user={session.user} />
           ) : (

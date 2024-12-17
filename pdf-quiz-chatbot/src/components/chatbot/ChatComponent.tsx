@@ -115,7 +115,7 @@ const ChatComponent = ({ chatId, onPDFLinkUpdate, typingSpeed = 50 }: Props) => 
     formData.append("pdf", file);
   
     try {
-      const { data } = await axios.post("/api/upload-pdf", formData, {
+      const { data } = await axios.post(`/api/chat/${chatId}/pdf`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

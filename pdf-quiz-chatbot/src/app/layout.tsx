@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
+import FooterWebsite from "@/components/footer/FooterWebsite";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,8 @@ export default function RootLayout({
       <body className={cn(inter.className, "antialiased min-h-screen pt-16")}>
         <Providers>
           <Navbar />
-          {children}
+          <main>{children}</main>
+          <FooterWebsite />
         </Providers>
       </body>
     </html>
