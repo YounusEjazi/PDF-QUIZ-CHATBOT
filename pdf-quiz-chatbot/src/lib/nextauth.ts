@@ -1,9 +1,11 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { type NextAuthOptions, getServerSession, DefaultSession } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/db";
+import bcrypt from "bcrypt";
 
-// Extend default session interface to include user ID
+// Erweiterte Typen
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
@@ -29,6 +31,35 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) {
+          throw new Error("Email and password are required");
+        }
+
+        // Benutzer aus der Datenbank abrufen
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user) {
+          throw new Error("No user found. Please register first.");
+        }
+
+        // Passwort prüfen
+        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+        if (!isValidPassword) {
+          throw new Error("Invalid password");
+        }
+
+        return { id: user.id, email: user.email, name: user.name };
+      },
+    }),
   ],
   callbacks: {
     jwt: async ({ token, user }) => {
@@ -38,23 +69,15 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     session: async ({ session, token }) => {
-      session.user = {
-        ...session.user,
-        id: token.id,
-      };
+      if (token) {
+        session.user.id = token.id as string;
+      }
       return session;
     },
-    redirect: async ({ url, baseUrl }) => {
-      // Redirect to dashboard after sign-in
-      return url.startsWith(baseUrl) ? url : `${baseUrl}/dashboard`;
-    },
-  },
-  pages: {
-    signIn: "/auth/signin",
-    newUser: "/auth/register", // Custom registration page
   },
 };
 
+// Funktion für die Authentifizierungs-Session
 export const getAuthSession = async () => {
-  return getServerSession(authOptions);
+  return await getServerSession(authOptions);
 };
