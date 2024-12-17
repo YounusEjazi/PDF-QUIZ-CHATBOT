@@ -39,28 +39,6 @@ export default async function Home() {
   ];
 
   return (
-<<<<<<< Updated upstream
-    <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-      <Card className="w-[400px] p-4">
-        <CardHeader>
-          <CardTitle>Welcome to Quizzzy 🔥!</CardTitle>
-          <CardDescription>
-            Quizzzy is your platform for interactive learning! Explore our services:
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <WordCloud formattedTopics={staticTopics} />
-          <div className="mt-4">
-            <p className="text-center text-sm text-muted-foreground">
-              Click on a topic to learn more about our services.
-            </p>
-            <div className="mt-4 flex justify-center">
-              <SignInButton text="Sign In with Google" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-=======
     <div className="min-h-screen w-screen flex items-center justify-center overflow-y-auto bg-gradient-to-br animate-gradient-move from-blue-700 via-purple-700 to-pink-700 bg-[length:200%_200%]">
       {/* Glassmorphic Container */}
       <div className="bg-white/10 backdrop-blur-lg border border-white/20 shadow-lg rounded-2xl w-11/12 max-w-5xl p-8">
@@ -140,7 +118,6 @@ export default async function Home() {
           © 2024 Quizzzy. All rights reserved.
         </footer>
       </div>
->>>>>>> Stashed changes
     </div>
   );
 }
