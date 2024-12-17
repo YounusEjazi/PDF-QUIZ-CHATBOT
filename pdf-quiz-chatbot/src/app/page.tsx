@@ -9,24 +9,21 @@ import {
 } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import WordCloud from "@/components/WordCloud";
+import { authOptions } from "@/lib/nextauth";
 
 export default async function Home() {
-  const session = await getServerSession();
-  
+  const session = await getServerSession(authOptions);
+
   // Redirect logged-in users to the dashboard
   if (session?.user) {
     redirect("/dashboard");
   }
 
-  // Static topics/services for the word cloud
-  const staticTopics = [
-    { text: "Uni Siegen Chatbot", value: 30 },
-    { text: "Learn with Quiz", value: 25 },
-    { text: "AI-Powered Quizzes", value: 20 },
-    { text: "PDF to Quiz Converter", value: 35 },
-    { text: "Interactive Chatbot", value: 15 },
-    { text: "AI Assistance", value: 10 },
+  const features = [
+    { title: "Interactive Chatbot", description: "Chat with an AI-powered assistant for instant help." },
+    { title: "AI Quizzes", description: "Generate quizzes powered by cutting-edge AI technology." },
+    { title: "PDF to Quiz", description: "Transform your PDFs into interactive quizzes effortlessly." },
+    { title: "Learn with Fun", description: "Make learning enjoyable with gamified quizzes and challenges." },
   ];
 
   const staticTopics = [
