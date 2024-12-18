@@ -45,19 +45,12 @@ const SignInButton = ({ text }: Props) => {
           >
             Sign in with Google
           </button>
-          {/* Sign in with Email */}
-          <button
-            onClick={handleEmailSignIn}
-            className="block px-4 py-2 text-left text-gray-800 hover:bg-gray-100 w-full"
-          >
-            Sign in with Email
-          </button>
           {/* Register */}
           <Link
             href="/auth/register"
             className="block px-4 py-2 text-left text-gray-800 hover:bg-gray-100 w-full"
           >
-            Register
+            Sign-In/Up
           </Link>
         </div>
       )}

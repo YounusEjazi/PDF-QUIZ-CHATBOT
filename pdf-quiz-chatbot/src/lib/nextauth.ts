@@ -1,28 +1,14 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { type NextAuthOptions, getServerSession, DefaultSession } from "next-auth";
+import { type NextAuthOptions, getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
 
-// Erweiterte Typen
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-    } & DefaultSession["user"];
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-  }
-}
-
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    maxAge: 60 * 60, // Session expires after 1 hour
   },
   secret: process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),
@@ -30,6 +16,11 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      authorization: {
+        params: {
+          prompt: "select_account", // Forces Google authentication prompt
+        },
+      },
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -42,7 +33,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required");
         }
 
-        // Benutzer aus der Datenbank abrufen
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
@@ -51,33 +41,67 @@ export const authOptions: NextAuthOptions = {
           throw new Error("No user found. Please register first.");
         }
 
-        // Passwort prüfen
-        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+        const isValidPassword = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
         if (!isValidPassword) {
           throw new Error("Invalid password");
         }
 
-        return { id: user.id, email: user.email, name: user.name };
+        // Ensure we return consistent user details
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name || `${user.firstName} ${user.lastName}`,
+          image: user.image || null,
+        };
       },
     }),
   ],
   callbacks: {
     jwt: async ({ token, user }) => {
+      // Add user data to token on login
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.image = user.image;
       }
+
       return token;
     },
     session: async ({ session, token }) => {
+      // Add user details to session from token
       if (token) {
         session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.image = token.image as string;
       }
+
       return session;
     },
   },
+  events: {
+    async signIn({ user, isNewUser }) {
+      // Ensure user is created in the database for non-OAuth logins
+      if (isNewUser && user.email) {
+        await prisma.user.update({
+          where: { email: user.email },
+          data: {
+            emailVerified: new Date(),
+          },
+        });
+      }
+    },
+  },
+  pages: {
+    signIn: "/auth/signin", // Custom sign-in page
+    error: "/auth/error",   // Custom error page
+  },
 };
 
-// Funktion für die Authentifizierungs-Session
 export const getAuthSession = async () => {
   return await getServerSession(authOptions);
 };
