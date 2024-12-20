@@ -59,6 +59,12 @@ export default {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
+  			},
+  			shiki: {
+  				light: 'var(--shiki-light)',
+  				'light-bg': 'var(--shiki-light-bg)',
+  				dark: 'var(--shiki-dark)',
+  				'dark-bg': 'var(--shiki-dark-bg)'
   			}
   		},
   		borderRadius: {
@@ -68,7 +74,8 @@ export default {
   		},
   		animation: {
   			wobble: 'wobble 1s ease-in-out infinite',
-  			'gradient-move': 'gradientMove 15s ease infinite'
+  			'gradient-move': 'gradientMove 15s ease infinite',
+  			'typing-dot-bounce': 'typing-dot-bounce 1.25s ease-out infinite'
   		},
   		keyframes: {
   			wobble: {
@@ -97,6 +104,14 @@ export default {
   				},
   				'100%': {
   					backgroundPosition: '0% 50%'
+  				}
+  			},
+  			'typing-dot-bounce': {
+  				'0%,40%': {
+  					transform: 'translateY(0)'
+  				},
+  				'20%': {
+  					transform: 'translateY(-0.25rem)'
   				}
   			}
   		}

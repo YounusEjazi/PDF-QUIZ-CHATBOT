@@ -33,7 +33,14 @@ const MCQPage = async ({ params: { gameId } }: Props) => {
   if (!game || game.gameType === "open_ended") {
     return redirect("/quiz");
   }
-  return <MCQ game={game} />;
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-grow">
+        <MCQ game={game} />
+      </div>
+    </div>
+  );
 };
 
 export default MCQPage;

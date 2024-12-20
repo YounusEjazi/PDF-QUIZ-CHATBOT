@@ -90,82 +90,82 @@ const AuthPage = () => {
 
           {/* Card Content */}
           <CardContent>
-            {error && (
-              <p className="text-center text-red-500 mb-4">{error}</p>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {!isSignIn && (
+              {error && (
+                <p className="text-center text-red-500 mb-4">{error}</p>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {!isSignIn && (
+                  <div>
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      type="text"
+                      id="name"
+                      name="name"
+                      placeholder="Your name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      className="bg-transparent"
+                    />
+                  </div>
+                )}
                 <div>
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    type="text"
-                    id="name"
-                    name="name"
-                    placeholder="Your name"
-                    value={formData.name}
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Your email"
+                    value={formData.email}
                     onChange={handleChange}
                     required
                     className="bg-transparent"
                   />
                 </div>
-              )}
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Your email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="bg-transparent"
-                />
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Your password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    className="bg-transparent"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/80"
+                >
+                  {isSignIn ? "Sign In" : "Register"}
+                </Button>
+              </form>
+              <div className="mt-4 text-center text-sm">
+                {isSignIn ? (
+                  <>
+                    Don&apos;t have an account?{" "}
+                    <button
+                      onClick={() => setIsSignIn(false)}
+                      className="underline text-[hsl(var(--primary))]"
+                    >
+                      Sign Up
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{" "}
+                    <button
+                      onClick={() => setIsSignIn(true)}
+                      className="underline text-[hsl(var(--primary))]"
+                    >
+                      Sign In
+                    </button>
+                  </>
+                )}
               </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="Your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="bg-transparent"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {isSignIn ? "Sign In" : "Register"}
-              </Button>
-            </form>
-            <div className="mt-4 text-center text-sm">
-              {isSignIn ? (
-                <>
-                  Don&apos;t have an account?{" "}
-                  <button
-                    onClick={() => setIsSignIn(false)}
-                    className="underline text-blue-500"
-                  >
-                    Sign Up
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    onClick={() => setIsSignIn(true)}
-                    className="underline text-blue-500"
-                  >
-                    Sign In
-                  </button>
-                </>
-              )}
-            </div>
-          </CardContent>
+            </CardContent>
         </div>
 
         {/* Sliding Glassmorphic Overlay */}

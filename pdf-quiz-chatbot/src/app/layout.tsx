@@ -20,13 +20,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={cn(inter.className, "antialiased min-h-screen pt-16")}>
+      <body className={cn("antialiased min-h-screen flex flex-col")}>
         <Providers>
           <Navbar />
-          <main>{children}</main>
+          {/* Ensure main content stretches to fill the viewport */}
+          <main className="flex-grow pt-16">{children}</main>
           <FooterWebsite />
         </Providers>
       </body>
     </html>
   );
 }
+

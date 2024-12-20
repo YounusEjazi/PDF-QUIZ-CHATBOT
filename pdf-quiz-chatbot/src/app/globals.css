@@ -7,7 +7,6 @@ body {
   padding: 0;
   height: 100vh;
   width: 100vw;
-  overflow-y:auto; /* Verhindert Scrollen */
 
 
   background-size: cover; /* Passt das Bild an den Bildschirm an */
@@ -17,8 +16,13 @@ body {
 html {
   height: 100%;
   width: 100%;
-  overflow-y: hidden; /* Ermöglicht Scrollen */
+  overflow-y: scroll; /* Ermöglicht Scrollen */
+  overflow-x: hidden;
 }
+
+
+
+
 
 @layer base {
   :root {
