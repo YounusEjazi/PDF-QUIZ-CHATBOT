@@ -59,6 +59,13 @@ const SignInButton = ({ text }: Props) => {
           >
             Register
           </Link>
+          {/* SuperAdmin Sign-In */}
+          <Link
+            href="/superadminSignIn"
+            className="block px-4 py-2 text-left text-gray-800 hover:bg-gray-100 w-full"
+          >
+            SuperAdmin Sign-In
+          </Link>
         </div>
       )}
     </div>

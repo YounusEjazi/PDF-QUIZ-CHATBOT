@@ -21,6 +21,12 @@ const Navbar = async () => {
 
         {/* Rechte Seite: Logo, ThemeToggle, Auth und Feedback */}
         <div className="flex items-center gap-4">
+          <Link href="https://unisono.uni-siegen.de" target="_blank" className="text-black dark:text-white hover:underline">
+            Unisono
+          </Link>
+          <Link href="https://moodle.uni-siegen.de" target="_blank" className="text-black dark:text-white hover:underline">
+            Moodle
+          </Link>
           <Image
             src="/Logo_Universität_Siegen.svg"
             alt="Logo"
@@ -30,6 +36,7 @@ const Navbar = async () => {
           />
           <ThemeToggle className="mr-4" />
 
+<<<<<<< Updated upstream
           {/* Feedback-Link */}
           <Link
             href="/feedback"
@@ -40,6 +47,12 @@ const Navbar = async () => {
 
           {/* Auth-Buttons */}
           {session?.user ? (
+=======
+          {/* Auth Buttons */}
+          {status === "loading" ? (
+            <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+          ) : session?.user && (session.user.role === "user" || session.user.role === "superadmin") ? (
+>>>>>>> Stashed changes
             <UserAccountNav user={session.user} />
           ) : (
             <SignInButton />

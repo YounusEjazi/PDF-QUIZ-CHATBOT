@@ -21,8 +21,7 @@ type Props = {
 const UserAccountNav = ({ user }: Props) => {
   const handleSignOut = async (event: React.MouseEvent) => {
     event.preventDefault();
-    await signOut({ redirect: false }); // Logs out without redirect
-    setTimeout(() => window.location.reload(), 500); // Full reload to clear session
+    await signOut({ callbackUrl: "/" }); // Logs out and redirects to the homepage
   };
 
   return (

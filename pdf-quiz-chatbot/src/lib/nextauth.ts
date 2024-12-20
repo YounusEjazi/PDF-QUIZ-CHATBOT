@@ -23,6 +23,11 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+<<<<<<< Updated upstream
+=======
+    maxAge: 60 * 60, // Session expires after 1 hour
+    updateAge: 15 * 60, // Token refresh interval
+>>>>>>> Stashed changes
   },
   secret: process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),
@@ -44,20 +49,41 @@ export const authOptions: NextAuthOptions = {
 
         // Benutzer aus der Datenbank abrufen
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.trim() },
         });
 
         if (!user) {
           throw new Error("No user found. Please register first.");
         }
 
+<<<<<<< Updated upstream
         // Passwort prüfen
         const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+=======
+        const isValidPassword = await bcrypt.compare(
+          credentials.password.trim(),
+          user.password
+        );
+>>>>>>> Stashed changes
         if (!isValidPassword) {
           throw new Error("Invalid password");
         }
 
+<<<<<<< Updated upstream
         return { id: user.id, email: user.email, name: user.name };
+=======
+        // Check if user is a SuperAdmin (optional)
+        const superAdminEmails = ["lahmar.mustapha@gmail.com"];
+        const role = superAdminEmails.includes(user.email) ? "superadmin" : "user";
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name || `${user.firstName} ${user.lastName}`,
+          image: user.image || null,
+          role, // Include role in user object
+        };
+>>>>>>> Stashed changes
       },
     }),
   ],
@@ -65,12 +91,26 @@ export const authOptions: NextAuthOptions = {
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;
+<<<<<<< Updated upstream
+=======
+        token.email = user.email;
+        token.name = user.name;
+        token.image = user.image;
+        token.role = user.role || "user";
+>>>>>>> Stashed changes
       }
       return token;
     },
     session: async ({ session, token }) => {
       if (token) {
         session.user.id = token.id as string;
+<<<<<<< Updated upstream
+=======
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.image = token.image as string;
+        session.user.role = token.role as string;
+>>>>>>> Stashed changes
       }
       return session;
     },
