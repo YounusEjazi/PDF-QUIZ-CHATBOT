@@ -5,6 +5,8 @@ import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { MessageList } from "@/components/ui/message-list";
 import { MessageInput } from "@/components/ui/message-input";
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions";
+import { Button } from "@/components/ui/button";
+import { FilePlus } from "lucide-react";
 import axios from "axios";
 
 type Props = {
@@ -18,9 +20,11 @@ const ChatComponent = ({ chatId, typingSpeed = 50 }: Props) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isNewChat, setIsNewChat] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [isNewChat, setIsNewChat] = useState(true);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
+  // Fetch messages when the component loads
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -33,12 +37,52 @@ const ChatComponent = ({ chatId, typingSpeed = 50 }: Props) => {
     };
 
     if (chatId) {
-      setMessages([]);
-      setIsNewChat(true);
-      setIsTyping(false);
       fetchMessages();
     }
   }, [chatId]);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = event.target.files?.[0];
+    if (!uploadedFile) return;
+    setPdfFile(uploadedFile);
+  };
+
+  const handleSubmitFile = async () => {
+    if (!pdfFile) {
+      console.error("No PDF file selected.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("pdf", pdfFile);
+
+    try {
+      const response = await axios.post(`/api/chat/${chatId}/pdf`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const responseData = response.data;
+
+      const botMessage = {
+        id: Date.now().toString(),
+        sender: "bot",
+        content: responseData.message || "PDF uploaded and processed successfully.",
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+      setPdfFile(null); // Reset file input after successful upload
+    } catch (error) {
+      console.error("Error uploading PDF:", error);
+
+      const errorMessage = {
+        id: Date.now().toString(),
+        sender: "bot",
+        content: "Failed to process the PDF. Please try again.",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
 
   const sendMessage = async () => {
     const content = inputValue.trim();
@@ -48,15 +92,21 @@ const ChatComponent = ({ chatId, typingSpeed = 50 }: Props) => {
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
 
+    setIsNewChat(false);
     setIsTyping(true);
 
+    const typingMessage: Message = { id: "bot-typing", sender: "bot", content: "Typing..." };
+    setMessages((prev) => [...prev, typingMessage]);
+
     try {
+      // Save user message to the database
       await axios.post(`/api/chat/${chatId}/messages`, userMessage);
 
-      const botTypingMessage: Message = { id: "bot-typing", sender: "bot", content: "Typing..." };
-      setMessages((prev) => [...prev, botTypingMessage]);
-
-      const { data: botResponse } = await axios.post("/api/chatbot", { userMessage: content });
+      // Get bot response
+      const { data: botResponse } = await axios.post("/api/chatbot", {
+        userMessage: content,
+        chatId,
+      });
 
       const botMessage: Message = {
         id: Date.now().toString(),
@@ -64,6 +114,7 @@ const ChatComponent = ({ chatId, typingSpeed = 50 }: Props) => {
         content: botResponse.response,
       };
 
+      // Save bot response to the database
       await axios.post(`/api/chat/${chatId}/messages`, botMessage);
 
       setMessages((prev) =>
@@ -71,6 +122,13 @@ const ChatComponent = ({ chatId, typingSpeed = 50 }: Props) => {
       );
     } catch (error) {
       console.error("Error sending message:", error);
+      setMessages((prev) =>
+        prev.filter((msg) => msg.id !== "bot-typing").concat({
+          id: Date.now().toString(),
+          sender: "bot",
+          content: "Sorry, there was an error. Please try again.",
+        })
+      );
     } finally {
       setIsTyping(false);
     }
@@ -105,8 +163,25 @@ const ChatComponent = ({ chatId, typingSpeed = 50 }: Props) => {
           />
         </div>
       )}
-      <div className="p-2 flex justify-center items-center">
-        <div className="max-w-screen-sm w-full">
+
+      <div className="p-4 flex items-center space-x-4">
+        <label htmlFor="pdf-upload" className="flex items-center space-x-2 cursor-pointer">
+          <FilePlus className="h-6 w-6 text-gray-600" />
+          <span className="text-sm text-gray-600">Upload PDF</span>
+          <input
+            type="file"
+            id="pdf-upload"
+            accept=".pdf"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </label>
+
+        <Button onClick={handleSubmitFile} disabled={!pdfFile}>
+          Submit PDF
+        </Button>
+
+        <div className="flex-1">
           <MessageInput
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

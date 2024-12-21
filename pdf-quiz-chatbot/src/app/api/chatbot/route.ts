@@ -1,16 +1,25 @@
 import { NextResponse } from "next/server";
 import { strict_output } from "@/lib/gpt2";
+import { prisma } from "@/lib/db";
 
 export const POST = async (req: Request) => {
   try {
     const body = await req.json();
-    const { userMessage } = body;
+    const { userMessage, chatId } = body;
 
     if (!userMessage || typeof userMessage !== "string") {
       return NextResponse.json({ error: "Invalid user input." }, { status: 400 });
     }
 
-    const systemPrompt = `You are a helpful and knowledgeable assistant. Provide clear and detailed responses. Include examples, code snippets, or step-by-step explanations where applicable.`;
+    // Retrieve context for the chat
+    const chatContext = await prisma.chatContext.findFirst({
+      where: { chatId },
+      orderBy: { createdAt: "desc" }, // Use the latest context if multiple PDFs were uploaded
+    });
+
+    const systemPrompt = chatContext
+      ? `You are a helpful assistant. Use the provided context to answer questions clearly and concisely.\n\nContext:\n${chatContext.context}`
+      : "You are a helpful assistant. Answer questions clearly and concisely.";
 
     const botResponse = await strict_output(
       systemPrompt,

@@ -99,18 +99,31 @@ model topic_count {
 }
 
 model Chat {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pdfUrl    String?   // Optional URL for associated PDF
-  name      String?   // Name of the chat, references the first message content
-  messages  Message[] // Relation to messages
-  embeddings PDFEmbedding[] // Relation to embeddings (newly added)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pdfUrl        String?         // Optional URL for associated PDF
+  name          String?         // Name of the chat, references the first message content
+  messages      Message[]       // Relation to messages
+  embeddings    PDFEmbedding[]  // Relation to embeddings (newly added)
+  contexts      ChatContext[]   // Relation to ChatContext (newly added)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   @@index([userId])
 }
+
+model ChatContext {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  context   String   // Text content extracted from the PDF
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatId])
+}
+
 
 model Message {
   id        String   @id @default(cuid())

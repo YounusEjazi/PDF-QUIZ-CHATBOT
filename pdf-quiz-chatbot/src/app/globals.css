@@ -10,7 +10,7 @@ body {
 
 
   background-size: cover; /* Passt das Bild an den Bildschirm an */
-  background-color:rgb(9, 9, 52);
+  background-color:antiquewhite(9, 9, 52);
 }
 
 html {
