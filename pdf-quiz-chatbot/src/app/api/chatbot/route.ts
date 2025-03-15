@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { strict_output } from "@/lib/gpt2";
+import { strict_output } from "@/lib/gpt2"; 
 import { prisma } from "@/lib/db";
 
 export const POST = async (req: Request) => {
@@ -14,7 +14,7 @@ export const POST = async (req: Request) => {
     // Retrieve context for the chat
     const chatContext = await prisma.chatContext.findFirst({
       where: { chatId },
-      orderBy: { createdAt: "desc" }, // Use the latest context if multiple PDFs were uploaded
+      orderBy: { createdAt: "desc" }, 
     });
 
     const systemPrompt = chatContext
@@ -27,7 +27,7 @@ export const POST = async (req: Request) => {
       { answer: "string" },
       "",
       false,
-      "gpt-3.5-turbo",
+      "deepseek-chat", // Changed from "gpt-3.5-turbo" to DeepSeek model
       0.7,
       3,
       false

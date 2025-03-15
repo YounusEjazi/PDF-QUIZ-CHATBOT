@@ -4,8 +4,11 @@ CREATE TYPE "GameType" AS ENUM ('mcq', 'open_ended');
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
+    "firstName" TEXT,
+    "lastName" TEXT,
     "name" TEXT,
     "email" TEXT,
+    "password" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
     "isPro" BOOLEAN NOT NULL DEFAULT false,
@@ -86,10 +89,10 @@ CREATE TABLE "topic_count" (
 
 -- CreateTable
 CREATE TABLE "Chat" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "pdfUrl" TEXT,
-    "pdfName" TEXT,
+    "name" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -97,14 +100,37 @@ CREATE TABLE "Chat" (
 );
 
 -- CreateTable
+CREATE TABLE "ChatContext" (
+    "id" TEXT NOT NULL,
+    "chatId" TEXT NOT NULL,
+    "context" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ChatContext_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Message" (
-    "id" SERIAL NOT NULL,
-    "chatId" INTEGER NOT NULL,
+    "id" TEXT NOT NULL,
+    "chatId" TEXT NOT NULL,
     "sender" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PDFEmbedding" (
+    "id" TEXT NOT NULL,
+    "chatId" TEXT NOT NULL,
+    "pineconeId" TEXT NOT NULL,
+    "pdfUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PDFEmbedding_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -135,7 +161,13 @@ CREATE UNIQUE INDEX "topic_count_topic_key" ON "topic_count"("topic");
 CREATE INDEX "Chat_userId_idx" ON "Chat"("userId");
 
 -- CreateIndex
+CREATE INDEX "ChatContext_chatId_idx" ON "ChatContext"("chatId");
+
+-- CreateIndex
 CREATE INDEX "Message_chatId_idx" ON "Message"("chatId");
+
+-- CreateIndex
+CREATE INDEX "PDFEmbedding_chatId_idx" ON "PDFEmbedding"("chatId");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -153,4 +185,10 @@ ALTER TABLE "Question" ADD CONSTRAINT "Question_gameId_fkey" FOREIGN KEY ("gameI
 ALTER TABLE "Chat" ADD CONSTRAINT "Chat_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "ChatContext" ADD CONSTRAINT "ChatContext_chatId_fkey" FOREIGN KEY ("chatId") REFERENCES "Chat"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_chatId_fkey" FOREIGN KEY ("chatId") REFERENCES "Chat"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PDFEmbedding" ADD CONSTRAINT "PDFEmbedding_chatId_fkey" FOREIGN KEY ("chatId") REFERENCES "Chat"("id") ON DELETE CASCADE ON UPDATE CASCADE;
