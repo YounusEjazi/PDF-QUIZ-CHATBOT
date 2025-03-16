@@ -17,7 +17,7 @@ RUN npm install --legacy-peer-deps
 COPY pdf-quiz-chatbot .   
 
 # Expose the port Next.js will run on
-EXPOSE 3001   
+EXPOSE 3000  
 
 # Start the Next.js server in development mode
 CMD ["npm", "run", "dev"]
