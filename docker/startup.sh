@@ -3,8 +3,6 @@
 # Ensure dependencies are installed (in case they are missing)
 export NODE_OPTIONS=--openssl-legacy-provider
 
-echo "Installing dependencies..."
-npm install --legacy-peer-deps
 
 # Wait for PostgreSQL to be ready (check every 2 seconds for up to 60 seconds)
 echo "Waiting for PostgreSQL to be ready..."
