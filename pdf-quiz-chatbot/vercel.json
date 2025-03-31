@@ -7,7 +7,7 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "postgresql://prisma_owner:xxxx@xxxx.neon.tech/prisma?sslmode=require",
+    "DATABASE_URL": "postgresql://prisma_owner:LwSIg2cd0qZT@ep-rapid-glitter-a20bpmus.eu-central-1.aws.neon.tech/prisma?sslmode=require",
     "GOOGLE_CLIENT_ID": "@google_client_id",
     "GOOGLE_CLIENT_SECRET": "@google_client_secret",
     "NEXTAUTH_SECRET": "@nextauth_secret",
