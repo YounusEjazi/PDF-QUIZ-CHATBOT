@@ -12,34 +12,46 @@ const Navbar = () => {
   const { data: session, status } = useSession();
 
   return (
-    <div className="fixed inset-x-0 top-0 bg-white dark:bg-gray-950 z-[10] h-fit border-b border-zinc-300 py-2">
-      <div className="flex items-center justify-between h-full gap-2 px-8 mx-auto max-w-7xl">
-        <Link href="/" className="flex items-center gap-2">
-          <p className="rounded-lg border-2 border-b-4 border-r-4 border-black px-2 py-1 text-xl font-bold transition-all hover:-translate-y-[2px] dark:border-white">
-            PDF-Quiz-Chatbot
-          </p>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Image
-            src="/Logo_Universität_Siegen.svg"
-            alt="Logo"
-            width={150}
-            height={100}
-            className="rounded-md dark:brightness-0 dark:invert"
-          />
-          <ThemeToggle className="mr-4" />
+      <div className="fixed inset-x-0 top-0 bg-white dark:bg-gray-950 z-[10] h-fit border-b border-zinc-300 py-1 sm:py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-6 mx-auto max-w-7xl">
+          {/* Logo and Title */}
+          <Link href="/" className="flex items-center gap-2">
+            <p className="border-2 border-b-4 border-r-4 border-black dark:border-white px-2 py-0.5 text-base sm:text-lg font-bold rounded transition-all hover:-translate-y-[1px]">
+              PDF-Quiz-Chatbot
+            </p>
+          </Link>
 
-          {/* Auth Buttons */}
-          {status === "loading" ? (
-            <p className="text-gray-600 dark:text-gray-300">Loading...</p>
-          ) : session?.user ? (
-            <UserAccountNav user={session.user} />
-          ) : (
-            <SignInButton text="Sign In" />
-          )}
+          {/* Right Side */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
+            {/* Responsive Logo */}
+            <div className="w-20 sm:w-[120px]">
+              <Image
+                  src="/Logo_Universität_Siegen.svg"
+                  alt="Logo"
+                  width={120}
+                  height={80}
+                  className="w-full h-auto rounded-md dark:brightness-0 dark:invert"
+              />
+            </div>
+
+            {/* Theme Toggle */}
+            <div className="shrink-0">
+              <ThemeToggle className="mr-1 sm:mr-2" />
+            </div>
+
+            {/* Auth Buttons */}
+            <div className="shrink-0">
+              {status === "loading" ? (
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">Loading...</p>
+              ) : session?.user ? (
+                  <UserAccountNav user={session.user} />
+              ) : (
+                  <SignInButton text="Sign In" />
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
   );
 };
 
