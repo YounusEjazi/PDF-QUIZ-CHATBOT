@@ -9,7 +9,7 @@ import FooterWebsite from "@/components/footer/FooterWebsite";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Quizmify",
+  title: "PDF-Quiz-Chatbot",
   description: "Quiz yourself on anything!",
 };
 

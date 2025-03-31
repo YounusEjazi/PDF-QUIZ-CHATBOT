@@ -66,7 +66,7 @@ export default async function Home() {
 
         {/* Footer */}
         <footer className="mt-8 py-4 text-center text-sm text-white">
-          © 2024 Quizzzy. All rights reserved.
+          © 2024 PDF-Quiz-Chatbot. All rights reserved.
         </footer>
       </div>
     </div>
