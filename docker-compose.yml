@@ -4,7 +4,7 @@ services:
       context: .               # Build from the root directory (to include all files)
       dockerfile: Dockerfile    # Use the Dockerfile at the root of the project
     ports:
-      - "3000:3000"            # Map container port 3001 to local port 3001
+      - "3000:3000"            # Map container port 3000 to local port 3000
     env_file:
       - ./pdf-quiz-chatbot/.env
     volumes:
@@ -12,19 +12,19 @@ services:
       - ./docker:/docker         # Mount the docker folder to /docker inside the container
     working_dir: /app
     command: /docker/startup.sh  # Correct path to startup.sh script inside the container
-    depends_on:
-      - db  # Ensures the app waits for the PostgreSQL database to be ready
+    # depends_on:
+    #   - db  # (Commented out) Ensures the app waits for the PostgreSQL database to be ready
 
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: younasejazi1
-      POSTGRES_DB: pqc
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"  # Map Postgres port to the host
+  # db:
+  #   image: postgres:13
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: younasejazi1
+  #     POSTGRES_DB: pqc
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"  # Map Postgres port to the host
 
 volumes:
   postgres_data:  # Ensures persistent storage of the database
