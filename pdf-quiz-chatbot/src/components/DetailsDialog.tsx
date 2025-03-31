@@ -49,8 +49,8 @@ const DetailsDialog = (props: Props) => {
             </div> */}
             <p className="my-2 mt-4 ">
               Are you tired of mundane and repetitive quizzes? Say goodbye to
-              the ordinary and embrace the extraordinary with Quizmefy! Our
-              platform is revolutionizing the quiz and trivia experience by
+              the ordinary and embrace the extraordinary with PDF-Quiz-Chatbot! Our
+              platform is revolutionizing the quiz and learning experience by
               harnessing the immense potential of artificial intelligence.
             </p>
             <hr />

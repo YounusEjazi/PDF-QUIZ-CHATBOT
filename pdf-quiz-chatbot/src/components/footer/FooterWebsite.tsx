@@ -49,7 +49,7 @@ const FooterWebsite = () => {
 
         {/* Right Side: Copyright */}
         <div className="text-center md:text-right text-gray-600 dark:text-gray-400 text-sm">
-          © {new Date().getFullYear()} Quizzzy. All rights reserved.
+          © {new Date().getFullYear()} PDF-Quiz-Chatbot. All rights reserved.
         </div>
       </div>
     </footer>
