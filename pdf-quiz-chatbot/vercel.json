@@ -7,17 +7,5 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "postgresql://prisma_owner:LwSIg2cd0qZT@ep-rapid-glitter-a20bpmus.eu-central-1.aws.neon.tech/prisma?sslmode=require",
-    "GOOGLE_CLIENT_ID": "@google_client_id",
-    "GOOGLE_CLIENT_SECRET": "@google_client_secret",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "NEXTAUTH_URL": "@nextauth_url",
-    "API_URL": "@api_url",
-    "OPENAI_API_KEY": "@openai_api_key",
-    "DEEPSEEK_API_KEY": "@deepseek_api_key",
-    "PINECONE_API_KEY": "@pinecone_api_key",
-    "PINECONE_ENV": "@pinecone_env",
-    "PINECONE_INDEX_NAME": "@pinecone_index_name",
-    "PINECONE_HOST": "@pinecone_host"
   }
 }
