@@ -1,9 +1,1 @@
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "pdf-quiz-chatbot/next.config.js",
-      "use": "@vercel/next"
-    }
-  ]
-}
+
