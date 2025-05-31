@@ -31,11 +31,11 @@ export async function GET(req: Request, { params }: { params: { chatId: string }
 // Save a new message and update the chat name if needed
 export async function POST(req: Request, { params }: { params: { chatId: string } }) {
   const { chatId } = params;
-  const { sender, content } = await req.json();
+  const { sender, content, role } = await req.json();
 
-  if (!chatId || !sender || !content) {
+  if (!chatId || !content) {
     return NextResponse.json(
-      { error: "Chat ID, sender, and content are required" },
+      { error: "Chat ID and content are required" },
       { status: 400 }
     );
   }
@@ -45,13 +45,13 @@ export async function POST(req: Request, { params }: { params: { chatId: string 
     const message = await prisma.message.create({
       data: {
         chatId,
-        sender,
+        sender: sender || (role === "assistant" ? "bot" : "user"),
         content,
       },
     });
 
     // If the message is from the user and it's the first message, update the chat name
-    if (sender === "user") {
+    if (message.sender === "user") {
       const chat = await prisma.chat.findUnique({
         where: { id: chatId },
         select: { name: true },

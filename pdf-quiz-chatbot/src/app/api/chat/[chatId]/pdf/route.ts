@@ -7,6 +7,17 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { generateEmbeddings } from "@/lib/openai";
 import { prisma } from "@/lib/db";
 
+const PDF_SUCCESS_MESSAGE = "📚 PDF processed successfully! I've analyzed the document and I'm ready to answer your questions about it.";
+
+interface ChunkMetadata {
+  pageNumber: number;
+}
+
+interface DocumentChunk {
+  pageContent: string;
+  metadata: ChunkMetadata;
+}
+
 export async function POST(req: NextRequest, { params }: { params: { chatId: string } }) {
   try {
     const chatId = params.chatId;
@@ -33,14 +44,14 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
     await fs.unlink(tempFilePath);
 
     const textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
-    const chunks = [];
+    const chunks: DocumentChunk[] = [];
 
     for (const page of pages) {
       const splitDocs = await textSplitter.splitDocuments([{
         pageContent: page.pageContent.replace(/\n/g, ""),
         metadata: { pageNumber: page.metadata.loc.pageNumber },
       }]);
-      chunks.push(...splitDocs);
+      chunks.push(...(splitDocs as DocumentChunk[]));
     }
 
     const texts = chunks.map((chunk) => chunk.pageContent);
@@ -73,14 +84,32 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
       },
     });
 
+    // Save the success message in the chat history
+    await prisma.message.create({
+      data: {
+        chatId,
+        content: PDF_SUCCESS_MESSAGE,
+        sender: "bot",
+      },
+    });
+
+    // Update the chat with PDF URL
+    await prisma.chat.update({
+      where: { id: chatId },
+      data: { 
+        pdfUrl: uploadedFile.name,
+      },
+    });
+
     return NextResponse.json({
       message: "PDF processed successfully and context stored.",
       chunksProcessed: chunks.length,
     });
   } catch (error) {
     console.error("Error processing PDF:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(
-      { error: "Failed to process PDF.", details: error.message },
+      { error: "Failed to process PDF.", details: errorMessage },
       { status: 500 }
     );
   }

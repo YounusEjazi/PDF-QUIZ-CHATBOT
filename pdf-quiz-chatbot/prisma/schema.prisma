@@ -16,13 +16,50 @@ model User {
   password      String?   // For manual registration
   emailVerified DateTime?
   image         String?
+  bio           String?   // User biography
+  role          UserRole  @default(USER) // User role (admin, user, etc.)
+  preferences   Json?     // User preferences (theme, notifications, etc.)
+  
+  // Quiz and Game Statistics
+  totalPoints     Int      @default(0)  // Total points earned
+  quizzesTaken    Int      @default(0)  // Number of quizzes completed
+  averageScore    Float?   // Average quiz score
+  bestScore       Float?   // Best quiz score
+  totalCorrect    Int      @default(0)  // Total correct answers
+  totalQuestions  Int      @default(0)  // Total questions attempted
+  winStreak      Int      @default(0)  // Current winning streak
+  bestStreak     Int      @default(0)  // Best winning streak
+  
+  // Activity Tracking
+  lastActive     DateTime  @default(now()) // Last activity timestamp
+  lastQuizDate   DateTime? // Last quiz taken date
+  studyTime      Int      @default(0)  // Total study time in minutes
+  
+  // Social Features
+  badges         String[]  @default([]) // Achievement badges
+  level          Int      @default(1)  // User level
+  experience     Int      @default(0)  // XP points
+  
+  // Relationships
   games         Game[]    // Relation to games
   chats         Chat[]    // Relation to chats
   accounts      Account[] // Relation to accounts
   sessions      Session[] // Relation to sessions
+  feedback      Feedback[] // Relation to feedback
+  
+  // Subscription and Status
   isPro         Boolean   @default(false) // Subscription status
+  proExpiryDate DateTime? // Pro subscription expiry date
+  
+  // Metadata
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  MODERATOR
 }
 
 model Account {
@@ -68,6 +105,10 @@ model Game {
   gameType    GameType
   timeStarted DateTime
   timeEnded   DateTime?
+  score       Float?     // Final score for the game
+  totalTime   Int?      // Time taken in seconds
+  difficulty  String?   // Game difficulty level
+  selectedPages Int[]   // Array of selected page numbers
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -85,6 +126,8 @@ model Question {
   isCorrect         Boolean? // For MCQ questions
   questionType      GameType
   userAnswer        String?
+  timeTaken        Int?     // Time taken to answer in seconds
+  difficulty       String?  // Question difficulty
   createdAt         DateTime @default(now())
 
   @@index([gameId])
@@ -105,8 +148,8 @@ model Chat {
   pdfUrl        String?         // Optional URL for associated PDF
   name          String?         // Name of the chat, references the first message content
   messages      Message[]       // Relation to messages
-  embeddings    PDFEmbedding[]  // Relation to embeddings (newly added)
-  contexts      ChatContext[]   // Relation to ChatContext (newly added)
+  embeddings    PDFEmbedding[]  // Relation to embeddings
+  contexts      ChatContext[]   // Relation to ChatContext
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -123,7 +166,6 @@ model ChatContext {
 
   @@index([chatId])
 }
-
 
 model Message {
   id        String   @id @default(cuid())
@@ -146,4 +188,18 @@ model PDFEmbedding {
   updatedAt  DateTime @updatedAt
 
   @@index([chatId])
+}
+
+model Feedback {
+  id        String    @id @default(cuid())
+  content   String
+  rating    Int       @default(5)
+  category  String    @default("General Feedback")
+  userId    String?
+  userEmail String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
 }

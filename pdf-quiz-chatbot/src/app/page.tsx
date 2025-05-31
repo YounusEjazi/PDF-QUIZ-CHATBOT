@@ -1,77 +1,84 @@
 import SignInButton from "@/components/SignInButton";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/nextauth";
+import { redirect } from "next/navigation";
+import { ArrowRight, Brain, FileText, MessageSquare, Target } from "lucide-react";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
-  // Redirect logged-in users to the dashboard
   if (session?.user) {
     redirect("/dashboard");
   }
 
   const features = [
-    { title: "Interactive Chatbot", description: "Chat with an AI-powered assistant for instant help." },
-    { title: "AI Quizzes", description: "Generate quizzes powered by cutting-edge AI technology." },
-    { title: "PDF to Quiz", description: "Transform your PDFs into interactive quizzes effortlessly." },
-    { title: "Learn with Fun", description: "Make learning enjoyable with gamified quizzes and challenges." },
+    {
+      icon: Brain,
+      title: "AI-Powered Learning",
+      description: "Transform your study materials into interactive quizzes using advanced AI"
+    },
+    {
+      icon: FileText,
+      title: "PDF Integration",
+      description: "Upload PDFs and instantly create customized learning materials"
+    },
+    {
+      icon: MessageSquare,
+      title: "Smart Chatbot",
+      description: "Get instant help and explanations from our intelligent assistant"
+    },
+    {
+      icon: Target,
+      title: "Track Progress",
+      description: "Monitor your learning journey with detailed analytics and insights"
+    }
   ];
 
   return (
-      // Inside your Home component
-      <div className="relative min-h-screen w-full flex items-center justify-center overflow-y-auto px-4 sm:px-6">
-        {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500 animate-pulse opacity-30 blur-3xl" />
+    <main className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden p-4 sm:p-8">
+      {/* Gradient Orbs */}
+      <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 dark:bg-purple-900/50 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-blob" />
+      <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 dark:bg-blue-900/50 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 dark:bg-indigo-900/50 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-blob animation-delay-4000" />
 
-        {/* Main Container */}
-        <div className="relative z-1 bg-gradient-to-r from-blue-500 to-purple-600 opacity-90 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl w-full max-w-5xl p-4 sm:p-8">
-
-          {/* Welcome */}
-          <div className="text-center mb-6 sm:mb-8 text-white px-2 py-4 sm:p-6 rounded-lg">
-            <h1 className="text-3xl sm:text-5xl font-extrabold mb-2 sm:mb-4 font-[cursive] flex flex-wrap justify-center gap-2">
-              Welcome to PDF-QUIZ-CHATBOT
-              <span className="text-3xl sm:text-5xl">🔥</span>
-              <span className="text-3xl sm:text-5xl animate-wobble">👋</span>
-            </h1>
-            <p className="text-sm sm:text-lg">
-              Discover how this App can transform your learning experience!
-            </p>
+      <div className="relative max-w-5xl w-full space-y-20">
+        {/* Hero Section */}
+        <div className="text-center space-y-6">
+          <h1 className="text-5xl sm:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+            PDF Quiz Chatbot
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Transform your learning experience with AI-powered quizzes and intelligent assistance
+          </p>
+          <div className="pt-4">
+            <SignInButton text="Get Started" />
           </div>
-
-          {/* Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            {features.map((feature, index) => (
-                <Card
-                    key={index}
-                    className="h-40 sm:h-48 flex flex-col justify-between p-4 sm:p-6 shadow-md bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))]"
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">{feature.title}</CardTitle>
-                    <CardDescription className="text-sm">{feature.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-            ))}
-          </div>
-
-          {/* Sign-in Button */}
-          <div className="flex justify-center">
-            <SignInButton text="Let's get started" />
-          </div>
-
-          {/* Footer */}
-          <footer className="mt-6 sm:mt-8 py-2 sm:py-4 text-center text-xs sm:text-sm text-white">
-            © 2024 PDF-Quiz-Chatbot. All rights reserved.
-          </footer>
         </div>
-      </div>
 
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
+          {features.map((feature, index) => (
+            <div
+              key={index}
+              className="relative group"
+            >
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 dark:from-pink-500 dark:to-purple-500 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
+              <div className="relative bg-white dark:bg-gray-900 px-7 py-6 rounded-lg leading-none flex items-center space-x-6">
+                <feature.icon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{feature.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <footer className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">
+          © {new Date().getFullYear()} PDF Quiz Chatbot. All rights reserved.
+        </footer>
+      </div>
+    </main>
   );
 }

@@ -155,14 +155,17 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
                         type="number"
                         {...field}
                         onChange={(e) => {
-                          form.setValue("amount", parseInt(e.target.value, 10));
+                          const value = parseInt(e.target.value, 10);
+                          // Ensure value is between 3 and 10
+                          const clampedValue = Math.min(Math.max(value, 3), 10);
+                          form.setValue("amount", clampedValue);
                         }}
-                        min={1}
+                        min={3}
                         max={10}
                       />
                     </FormControl>
                     <FormDescription>
-                      You can choose how many questions you would like to be quizzed on here.
+                      Choose between 3 and 10 questions for your quiz.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -1,76 +1,161 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { StarIcon } from "lucide-react";
+import { toast } from "sonner";
 
-const FeedbackPage = () => {
-  const [feedback, setFeedback] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+const categories = [
+  "General Feedback",
+  "Bug Report",
+  "Feature Request",
+  "UI/UX",
+  "Performance",
+  "Other",
+];
+
+export default function FeedbackPage() {
+  const { data: session } = useSession();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    content: "",
+    category: "General Feedback",
+    rating: 5,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    // API-Aufruf, um das Feedback zu speichern (optional)
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ feedback }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
-      if (response.ok) {
-        setSubmitted(true);
-        setFeedback(""); // Eingabefeld leeren
-      } else {
-        alert("Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.");
-      }
+      if (!response.ok) throw new Error("Failed to submit feedback");
+
+      toast.success("Thank you for your feedback!");
+      setFormData({
+        content: "",
+        category: "General Feedback",
+        rating: 5,
+      });
     } catch (error) {
-      console.error("Feedback konnte nicht gesendet werden:", error);
+      toast.error("Failed to submit feedback. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div
-      className="flex flex-col items-center justify-center min-h-screen p-4"
-      style={{
-        backgroundImage: `url('/feedback.jpg')`, // Pfad zu deinem Bild
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <h1 className="text-3xl font-bold text-white mb-4">Feedback</h1>
-      {submitted ? (
-        <div className="text-green-600 text-center bg-white p-4 rounded-lg shadow-lg">
-          <p>Vielen Dank für Ihr Feedback! 🙌</p>
-        </div>
-      ) : (
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 w-full max-w-md bg-white p-6 rounded-lg shadow-lg"
-        >
-          <label htmlFor="feedback" className="text-lg font-semibold">
-            Teilen Sie uns Ihr Feedback mit:
-          </label>
-          <textarea
-            id="feedback"
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            rows={5}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-500"
-            placeholder="Ihr Feedback hier eingeben..."
-            required
-          />
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
-          >
-            Feedback senden
-          </button>
-        </form>
-      )}
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        <Card className="backdrop-blur-sm bg-white/90">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Share Your Feedback</CardTitle>
+            <CardDescription className="text-center">
+              Help us improve your experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Rating */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Rating</label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, rating: star })}
+                      className="focus:outline-none"
+                    >
+                      <StarIcon
+                        className={`w-8 h-8 ${
+                          star <= formData.rating
+                            ? "text-yellow-400 fill-yellow-400"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Category</label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, category: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Feedback Content */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Your Feedback</label>
+                <Textarea
+                  value={formData.content}
+                  onChange={(e) =>
+                    setFormData({ ...formData, content: e.target.value })
+                  }
+                  rows={5}
+                  placeholder="Share your thoughts, suggestions, or report issues..."
+                  className="resize-none"
+                  required
+                />
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting || !formData.content.trim()}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Feedback"}
+              </Button>
+
+              {/* Login Prompt */}
+              {!session && (
+                <p className="text-sm text-center text-gray-500">
+                  Sign in to track your feedback and get responses
+                </p>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-};
-
-export default FeedbackPage;
+}

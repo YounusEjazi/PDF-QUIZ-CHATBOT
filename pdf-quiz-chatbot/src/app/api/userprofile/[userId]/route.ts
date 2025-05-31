@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db"; // Adjust this to your Prisma client path
 import { getAuthSession } from "@/lib/nextauth";
+import { z } from "zod";
 
+const updateProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  bio: z.string().optional(),
+});
+
+// GET user profile
 export async function GET(
   req: Request,
   { params }: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params;
+    const session = await getAuthSession();
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
 
-    // Fetch user by ID
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: {
+        id: params.userId,
+      },
       select: {
         id: true,
         firstName: true,
@@ -19,38 +31,169 @@ export async function GET(
         name: true,
         email: true,
         image: true,
+        bio: true,
+        role: true,
+        totalPoints: true,
+        quizzesTaken: true,
+        averageScore: true,
+        bestScore: true,
+        totalCorrect: true,
+        totalQuestions: true,
+        winStreak: true,
+        bestStreak: true,
+        lastActive: true,
+        lastQuizDate: true,
+        studyTime: true,
+        badges: true,
+        level: true,
+        experience: true,
         isPro: true,
+        proExpiryDate: true,
         createdAt: true,
+        _count: {
+          select: {
+            games: true,
+            chats: true,
+          },
+        },
       },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return new NextResponse('User not found', { status: 404 });
     }
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error("Error fetching user:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error('[USER_GET]', error);
+    return new NextResponse('Internal Error', { status: 500 });
   }
 }
 
+// UPDATE user profile
 export async function PUT(
   req: Request,
   { params }: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params;
     const session = await getAuthSession();
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
 
-    // Ensure user is authenticated
-    if (!session?.user || session.user.id !== userId) {
+    // Only allow users to update their own profile or admins
+    if (session.user.id !== params.userId && session.user.role !== 'ADMIN') {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    const body = await req.json();
+    const {
+      firstName,
+      lastName,
+      bio,
+      preferences,
+    } = body;
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: params.userId,
+      },
+      data: {
+        firstName,
+        lastName,
+        bio,
+        preferences,
+        name: `${firstName} ${lastName}`.trim(),
+        lastActive: new Date(),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        email: true,
+        image: true,
+        bio: true,
+        role: true,
+        totalPoints: true,
+        quizzesTaken: true,
+        averageScore: true,
+        bestScore: true,
+        totalCorrect: true,
+        totalQuestions: true,
+        winStreak: true,
+        bestStreak: true,
+        lastActive: true,
+        lastQuizDate: true,
+        studyTime: true,
+        badges: true,
+        level: true,
+        experience: true,
+        isPro: true,
+        proExpiryDate: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(updatedUser);
+  } catch (error) {
+    console.error('[USER_UPDATE]', error);
+    return new NextResponse('Internal Error', { status: 500 });
+  }
+}
+
+// DELETE user profile
+export async function DELETE(
+  req: Request,
+  { params }: { params: { userId: string } }
+) {
+  try {
+    const session = await getAuthSession();
+    const user = await prisma.user.findUnique({
+      where: { email: session?.user?.email! },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is deleting their own profile
+    if (user.id !== params.userId) {
+      return NextResponse.json(
+        { error: "You can only delete your own profile" },
+        { status: 403 }
+      );
+    }
+
+    // Delete user and all related data
+    await prisma.user.delete({
+      where: { id: params.userId },
+    });
+
+    return NextResponse.json({ message: "Profile deleted successfully" });
+  } catch (error) {
+    console.error("Profile deletion error:", error);
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: { userId: string } }
+) {
+  try {
+    const session = await getAuthSession();
+    const user = await prisma.user.findUnique({
+      where: { email: session?.user?.email! },
+    });
+
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -58,26 +201,39 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { firstName, lastName, name, image } = body;
+    const { firstName, lastName, bio } = updateProfileSchema.parse(body);
 
-    // Update user profile
+    // Check if user is updating their own profile
+    if (user.id !== params.userId) {
+      return NextResponse.json(
+        { error: "You can only update your own profile" },
+        { status: 403 }
+      );
+    }
+
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id: params.userId },
       data: {
         firstName,
         lastName,
-        name,
-        image,
-        updatedAt: new Date(),
+        bio,
+        name: firstName && lastName ? `${firstName} ${lastName}` : undefined,
       },
     });
 
     return NextResponse.json(updatedUser);
   } catch (error) {
-    console.error("Error updating user:", error);
+    console.error("Profile update error:", error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.issues },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: "Failed to update user profile" },
+      { error: "Something went wrong" },
       { status: 500 }
     );
   }
 }
+

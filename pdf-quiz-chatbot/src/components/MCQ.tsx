@@ -40,11 +40,20 @@ const MCQ = ({ game }: Props) => {
   const options = React.useMemo(() => {
     if (!currentQuestion) return [];
     if (!currentQuestion.options) return [];
-    return JSON.parse(currentQuestion.options as string) as string[];
+    try {
+      // Handle both string formats (with single or double quotes)
+      const optionsStr = currentQuestion.options.toString()
+        .replace(/'/g, '"')  // Replace single quotes with double quotes for JSON parsing
+        .replace(/\\/g, ''); // Remove escape characters
+      return JSON.parse(optionsStr) as string[];
+    } catch (error) {
+      console.error("Failed to parse options:", error);
+      return [];
+    }
   }, [currentQuestion]);
 
   const { toast } = useToast();
-  const { mutate: checkAnswer, isLoading: isChecking } = useMutation({
+  const { mutate: checkAnswer, isPending: isChecking } = useMutation({
     mutationFn: async () => {
       const payload: z.infer<typeof checkAnswerSchema> = {
         questionId: currentQuestion.id,
@@ -75,6 +84,15 @@ const MCQ = ({ game }: Props) => {
   }, [hasEnded]);
 
   const handleNext = React.useCallback(() => {
+    if (!currentQuestion || !options || options.length === 0) {
+      toast({
+        title: "Error",
+        description: "No valid question or options found",
+        variant: "destructive",
+      });
+      return;
+    }
+
     checkAnswer(undefined, {
       onSuccess: ({ isCorrect }) => {
         if (isCorrect) {
@@ -83,9 +101,9 @@ const MCQ = ({ game }: Props) => {
             correct_answers: stats.correct_answers + 1,
           }));
           toast({
-            title: "Correct",
-            description: "You got it right!",
-            variant: "success",
+            title: "Correct!",
+            description: "Good job! Moving to next question...",
+            variant: "default",
           });
         } else {
           setStats((stats) => ({
@@ -94,7 +112,7 @@ const MCQ = ({ game }: Props) => {
           }));
           toast({
             title: "Incorrect",
-            description: "You got it wrong!",
+            description: `The correct answer was: ${options[3]}`,
             variant: "destructive",
           });
         }
@@ -104,9 +122,18 @@ const MCQ = ({ game }: Props) => {
           return;
         }
         setQuestionIndex((questionIndex) => questionIndex + 1);
+        setSelectedChoice(0); // Reset selection for next question
+      },
+      onError: (error) => {
+        console.error("Error checking answer:", error);
+        toast({
+          title: "Error",
+          description: "Failed to check answer. Please try again.",
+          variant: "destructive",
+        });
       },
     });
-  }, [checkAnswer, questionIndex, game.questions.length, toast, endGame]);
+  }, [checkAnswer, questionIndex, game.questions.length, toast, endGame, currentQuestion, options]);
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

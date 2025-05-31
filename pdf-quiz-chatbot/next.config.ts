@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  webpack: (config: any) => {
+    config.resolve.alias.canvas = false;
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+    };
+    return config;
+  },
   images: {
     domains: ["lh3.googleusercontent.com", "avatars.githubusercontent.com"],
   },

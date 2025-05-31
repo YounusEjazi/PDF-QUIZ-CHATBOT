@@ -16,7 +16,7 @@ import BlankAnswerInput from "./BlankAnswerInput";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { checkAnswerSchema, endGameSchema } from "@/schemas/questions";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useToast } from "../../src/hooks/use-toast";
 import Link from "next/link";
 
@@ -24,14 +24,24 @@ type Props = {
   game: Game & { questions: Pick<Question, "id" | "question" | "answer">[] };
 };
 
+interface CheckAnswerResponse {
+  percentageSimilar: number;
+}
+
 const OpenEnded = ({ game }: Props) => {
   const [hasEnded, setHasEnded] = React.useState(false);
   const [questionIndex, setQuestionIndex] = React.useState(0);
   const [blankAnswer, setBlankAnswer] = React.useState("");
   const [averagePercentage, setAveragePercentage] = React.useState(0);
+  const [totalCorrect, setTotalCorrect] = React.useState(0);
+
+  console.log("Total questions:", game.questions.length);
+  console.log("Current question index:", questionIndex);
+
   const currentQuestion = React.useMemo(() => {
     return game.questions[questionIndex];
   }, [questionIndex, game.questions]);
+
   const { mutate: endGame } = useMutation({
     mutationFn: async () => {
       const payload: z.infer<typeof endGameSchema> = {
@@ -41,23 +51,25 @@ const OpenEnded = ({ game }: Props) => {
       return response.data;
     },
   });
+
   const { toast } = useToast();
   const [now, setNow] = React.useState(new Date());
-  const { mutate: checkAnswer, isLoading: isChecking } = useMutation({
+
+  const { mutate: checkAnswer, isPending: isChecking } = useMutation<CheckAnswerResponse, AxiosError>({
     mutationFn: async () => {
-      let filledAnswer = blankAnswer;
-      document.querySelectorAll("#user-blank-input").forEach((input) => {
-        filledAnswer = filledAnswer.replace("_____", input.value);
-        input.value = "";
-      });
+      if (!blankAnswer) {
+        throw new Error("Please enter an answer");
+      }
+
       const payload: z.infer<typeof checkAnswerSchema> = {
         questionId: currentQuestion.id,
-        userInput: filledAnswer,
+        userInput: blankAnswer,
       };
       const response = await axios.post(`/api/checkAnswer`, payload);
       return response.data;
     },
   });
+
   React.useEffect(() => {
     if (!hasEnded) {
       const interval = setInterval(() => {
@@ -67,35 +79,72 @@ const OpenEnded = ({ game }: Props) => {
     }
   }, [hasEnded]);
 
+  const moveToNextQuestion = React.useCallback(() => {
+    if (questionIndex < game.questions.length - 1) {
+      setQuestionIndex(prev => prev + 1);
+      setBlankAnswer("");
+    } else {
+      endGame();
+      setHasEnded(true);
+    }
+  }, [questionIndex, game.questions.length, endGame]);
+
   const handleNext = React.useCallback(() => {
+    if (!currentQuestion) {
+      toast({
+        title: "Error",
+        description: "No question found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!blankAnswer) {
+      toast({
+        title: "Error",
+        description: "Please enter an answer",
+        variant: "destructive",
+      });
+      return;
+    }
+
     checkAnswer(undefined, {
       onSuccess: ({ percentageSimilar }) => {
-        toast({
-          title: `Your answer is ${percentageSimilar}% similar to the correct answer`,
-        });
-        setAveragePercentage((prev) => {
-          return (prev + percentageSimilar) / (questionIndex + 1);
-        });
-        if (questionIndex === game.questions.length - 1) {
-          endGame();
-          setHasEnded(true);
-          return;
+        const isCorrectEnough = percentageSimilar >= 70;
+        if (isCorrectEnough) {
+          setTotalCorrect(prev => prev + 1);
         }
-        setQuestionIndex((prev) => prev + 1);
-      },
-      onError: (error) => {
-        console.error(error);
+
         toast({
-          title: "Something went wrong",
+          title: isCorrectEnough ? "Correct!" : "Not quite right",
+          description: `The correct answer was: ${currentQuestion.answer}`,
+          variant: isCorrectEnough ? "default" : "destructive",
+        });
+
+        setAveragePercentage(prev => {
+          const newTotal = prev * questionIndex + percentageSimilar;
+          return newTotal / (questionIndex + 1);
+        });
+
+        moveToNextQuestion();
+      },
+      onError: (error: Error | AxiosError) => {
+        console.error(error);
+        const errorMessage = axios.isAxiosError(error)
+          ? error.response?.data?.error || "Failed to check answer"
+          : error instanceof Error ? error.message : "Something went wrong";
+        toast({
+          title: "Error checking answer",
+          description: errorMessage,
           variant: "destructive",
         });
       },
     });
-  }, [checkAnswer, questionIndex, toast, endGame, game.questions.length]);
+  }, [checkAnswer, currentQuestion, blankAnswer, toast, questionIndex, moveToNextQuestion]);
+
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const key = event.key;
-      if (key === "Enter") {
+      if (event.key === "Enter" && !isChecking && !hasEnded) {
         handleNext();
       }
     };
@@ -103,14 +152,17 @@ const OpenEnded = ({ game }: Props) => {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleNext]);
+  }, [handleNext, isChecking, hasEnded]);
 
   if (hasEnded) {
     return (
       <div className="absolute flex flex-col justify-center -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
         <div className="px-4 py-2 mt-2 font-semibold text-white bg-green-500 rounded-md whitespace-nowrap">
-          You Completed in{" "}
+          You completed {game.questions.length} questions in{" "}
           {formatTimeDelta(differenceInSeconds(now, game.timeStarted))}
+        </div>
+        <div className="px-4 py-2 mt-2 font-semibold text-white bg-blue-500 rounded-md whitespace-nowrap">
+          You got {totalCorrect} out of {game.questions.length} correct! ({Math.round(averagePercentage)}% average)
         </div>
         <Link
           href={`/statistics/${game.id}`}
@@ -123,11 +175,20 @@ const OpenEnded = ({ game }: Props) => {
     );
   }
 
+  if (!currentQuestion) {
+    return (
+      <div className="absolute flex flex-col justify-center -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+        <div className="px-4 py-2 mt-2 font-semibold text-red-500 rounded-md whitespace-nowrap">
+          No questions found
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute -translate-x-1/2 -translate-y-1/2 md:w-[80vw] max-w-4xl w-[90vw] top-1/2 left-1/2">
       <div className="flex flex-row justify-between">
         <div className="flex flex-col">
-          {/* topic */}
           <p>
             <span className="text-slate-400">Topic</span> &nbsp;
             <span className="px-2 py-1 text-white rounded-lg bg-slate-800">
@@ -139,7 +200,7 @@ const OpenEnded = ({ game }: Props) => {
             {formatTimeDelta(differenceInSeconds(now, game.timeStarted))}
           </div>
         </div>
-        <OpenEndedPercentage percentage={averagePercentage} />
+        <OpenEndedPercentage percentage={Math.round(averagePercentage)} />
       </div>
       <Card className="w-full mt-4">
         <CardHeader className="flex flex-row items-center">
@@ -150,22 +211,23 @@ const OpenEnded = ({ game }: Props) => {
             </div>
           </CardTitle>
           <CardDescription className="flex-grow text-lg">
-            {currentQuestion?.question}
+            Fill in the blank in the following sentence:
           </CardDescription>
         </CardHeader>
+        <div className="p-4 pt-0">
+          <p className="text-lg font-medium">{currentQuestion.question}</p>
+        </div>
       </Card>
       <div className="flex flex-col items-center justify-center w-full mt-4">
         <BlankAnswerInput
           setBlankAnswer={setBlankAnswer}
-          answer={currentQuestion.answer}
+          answer={currentQuestion.question}
         />
         <Button
           variant="outline"
           className="mt-4"
           disabled={isChecking || hasEnded}
-          onClick={() => {
-            handleNext();
-          }}
+          onClick={handleNext}
         >
           {isChecking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Next <ChevronRight className="w-4 h-4 ml-2" />
