@@ -1,7 +1,7 @@
 "use client";
 
 import type { User } from "next-auth";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,24 +12,30 @@ import {
 import UserAvatar from "./UserAvatar";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOut, Settings, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, User as UserIcon, LayoutDashboard, MessageSquare } from "lucide-react";
 
 type Props = {
-  user: Pick<User, "id" | "name" | "image" | "email">; // Ensure 'id' is included
+  user: Pick<User, "id" | "name" | "image" | "email"> & {
+    role?: string;
+  };
 };
 
 const UserAccountNav = ({ user }: Props) => {
-  const handleSignOut = async (event: React.MouseEvent) => {
-    event.preventDefault();
-    await signOut({ redirect: false }); // Logs out without redirect
-    setTimeout(() => window.location.reload(), 500); // Full reload to clear session
-  };
+  // Strict equality check for "ADMIN" role
+  const isAdmin = user?.role === "ADMIN";
+
+  useEffect(() => {
+    // Debug logging
+    console.log("UserAccountNav - User:", user);
+    console.log("UserAccountNav - Role:", user?.role);
+    console.log("UserAccountNav - Is Admin:", isAdmin);
+  }, [user, isAdmin]);
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
+      <DropdownMenuTrigger className="flex items-center gap-2">
         <UserAvatar
-          className="w-10 h-10"
+          className="w-8 h-8 md:w-10 md:h-10"
           user={{
             name: user.name || null,
             image: user.image || null,
@@ -37,7 +43,7 @@ const UserAccountNav = ({ user }: Props) => {
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="bg-white dark:bg-gray-950 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-950 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 w-[calc(100vw-2rem)] sm:w-[300px]"
         align="end"
       >
         {/* User Info */}
@@ -49,8 +55,13 @@ const UserAccountNav = ({ user }: Props) => {
               </p>
             )}
             {user.email && (
-              <p className="w-[200px] truncate text-sm text-gray-700 dark:text-gray-400">
+              <p className="truncate text-sm text-gray-700 dark:text-gray-400">
                 {user.email}
+              </p>
+            )}
+            {isAdmin && (
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                Admin User
               </p>
             )}
           </div>
@@ -61,8 +72,8 @@ const UserAccountNav = ({ user }: Props) => {
         {/* Profile Link */}
         <DropdownMenuItem asChild>
           <Link
-            href={`/userprofile/${user.id}`} // Dynamically include userId
-            className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-1 transition flex items-center gap-2"
+            href={`/userprofile/${user.id}`}
+            className="w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-2 transition flex items-center gap-2"
           >
             <UserIcon className="w-4 h-4" />
             Profile
@@ -73,12 +84,25 @@ const UserAccountNav = ({ user }: Props) => {
         <DropdownMenuItem asChild>
           <Link
             href="/settings"
-            className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-1 transition flex items-center gap-2"
+            className="w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-2 transition flex items-center gap-2"
           >
             <Settings className="w-4 h-4" />
             Settings
           </Link>
         </DropdownMenuItem>
+
+        {/* Admin Dashboard Link */}
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link
+              href="/admin/dashboard"
+              className="w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-2 transition flex items-center gap-2 text-blue-600 dark:text-blue-400"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Admin Dashboard
+            </Link>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
 
@@ -86,8 +110,9 @@ const UserAccountNav = ({ user }: Props) => {
         <DropdownMenuItem asChild>
           <Link
             href="/feedback"
-            className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-1 transition flex items-center gap-2"
+            className="w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-2 transition flex items-center gap-2"
           >
+            <MessageSquare className="w-4 h-4" />
             Feedback
           </Link>
         </DropdownMenuItem>
@@ -95,12 +120,14 @@ const UserAccountNav = ({ user }: Props) => {
         <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
 
         {/* Sign Out */}
-        <DropdownMenuItem
-          onSelect={handleSignOut}
-          className="text-red-600 dark:text-red-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-1 transition flex items-center gap-2"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign out
+        <DropdownMenuItem asChild>
+          <button
+            onClick={() => signOut({ redirect: false }).then(() => window.location.reload())}
+            className="w-full text-left text-red-600 dark:text-red-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-2 transition flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

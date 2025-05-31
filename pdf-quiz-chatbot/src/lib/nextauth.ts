@@ -55,29 +55,43 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name || `${user.firstName} ${user.lastName}`,
           image: user.image || null,
+          role: user.role,
         };
       },
     }),
   ],
   callbacks: {
-    jwt: async ({ token, user }) => {
+    jwt: async ({ token, user, trigger }) => {
       // Add user data to token on login
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
         token.image = user.image;
+        token.role = user.role;
+      }
+
+      // If it's a sign-in or update event, fetch the latest role
+      if (trigger === "signIn" || trigger === "update") {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email as string },
+          select: { role: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+        }
       }
 
       return token;
     },
     session: async ({ session, token }) => {
       // Add user details to session from token
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
         session.user.image = token.image as string;
+        session.user.role = token.role as string;
       }
 
       return session;

@@ -40,41 +40,41 @@ export function DashboardTabs({ user }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<"stats" | "settings">("stats");
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 sm:px-6 md:px-8 py-4 md:py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">My Dashboard</h2>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">My Dashboard</h2>
           <p className="text-sm text-muted-foreground">{user.bio}</p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex gap-6">
-        {/* Sidebar */}
-        <div className="w-64 shrink-0">
-          <div className="bg-card rounded-lg p-4 space-y-2">
+      <div className="flex flex-col space-y-4 md:space-y-6">
+        {/* Navigation - Horizontal on mobile, Sidebar on desktop */}
+        <div className="md:w-64 md:shrink-0">
+          <div className="bg-card rounded-lg p-2 md:p-4 flex md:flex-col gap-2">
             <button
               onClick={() => setActiveTab("stats")}
-              className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+              className={`flex-1 md:w-full flex items-center justify-center md:justify-start space-x-2 px-3 md:px-4 py-2 rounded-md transition-colors ${
                 activeTab === "stats"
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent"
               }`}
             >
               <ChartBar className="w-5 h-5" />
-              <span>Statistics</span>
+              <span className="hidden md:inline">Statistics</span>
             </button>
             <button
               onClick={() => setActiveTab("settings")}
-              className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+              className={`flex-1 md:w-full flex items-center justify-center md:justify-start space-x-2 px-3 md:px-4 py-2 rounded-md transition-colors ${
                 activeTab === "settings"
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent"
               }`}
             >
               <Settings className="w-5 h-5" />
-              <span>Settings</span>
+              <span className="hidden md:inline">Settings</span>
             </button>
           </div>
         </div>

@@ -10,7 +10,10 @@ import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-type Props = {};
+type Props = {
+  params: { [key: string]: string | string[] | undefined };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
 
 export const metadata = {
   title: "Dashboard | User",
@@ -36,16 +39,6 @@ const Dashboard = async (props: Props) => {
           Dashboard
         </h1>
         <div className="flex items-center gap-4">
-          <Link href="/admin/dashboard">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <User className="w-5 h-5" />
-            </Button>
-          </Link>
-          <Link href="/settings">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="w-5 h-5" />
-            </Button>
-          </Link>
           <DetailsDialog />
         </div>
       </nav>
