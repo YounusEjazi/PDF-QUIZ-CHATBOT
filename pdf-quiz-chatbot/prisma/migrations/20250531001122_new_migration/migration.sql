@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'USER', 'MODERATOR');
+
+-- CreateEnum
 CREATE TYPE "GameType" AS ENUM ('mcq', 'open_ended');
 
 -- CreateTable
@@ -11,7 +14,25 @@ CREATE TABLE "User" (
     "password" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
+    "bio" TEXT,
+    "role" "UserRole" NOT NULL DEFAULT 'USER',
+    "preferences" JSONB,
+    "totalPoints" INTEGER NOT NULL DEFAULT 0,
+    "quizzesTaken" INTEGER NOT NULL DEFAULT 0,
+    "averageScore" DOUBLE PRECISION,
+    "bestScore" DOUBLE PRECISION,
+    "totalCorrect" INTEGER NOT NULL DEFAULT 0,
+    "totalQuestions" INTEGER NOT NULL DEFAULT 0,
+    "winStreak" INTEGER NOT NULL DEFAULT 0,
+    "bestStreak" INTEGER NOT NULL DEFAULT 0,
+    "lastActive" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastQuizDate" TIMESTAMP(3),
+    "studyTime" INTEGER NOT NULL DEFAULT 0,
+    "badges" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "level" INTEGER NOT NULL DEFAULT 1,
+    "experience" INTEGER NOT NULL DEFAULT 0,
     "isPro" BOOLEAN NOT NULL DEFAULT false,
+    "proExpiryDate" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -54,6 +75,10 @@ CREATE TABLE "Game" (
     "gameType" "GameType" NOT NULL,
     "timeStarted" TIMESTAMP(3) NOT NULL,
     "timeEnded" TIMESTAMP(3),
+    "score" DOUBLE PRECISION,
+    "totalTime" INTEGER,
+    "difficulty" TEXT,
+    "selectedPages" INTEGER[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -71,6 +96,8 @@ CREATE TABLE "Question" (
     "isCorrect" BOOLEAN,
     "questionType" "GameType" NOT NULL,
     "userAnswer" TEXT,
+    "timeTaken" INTEGER,
+    "difficulty" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Question_pkey" PRIMARY KEY ("id")
