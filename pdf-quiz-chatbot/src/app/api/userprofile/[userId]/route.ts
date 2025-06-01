@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/db"; // Adjust this to your Prisma client path
 import { getAuthSession } from "@/lib/auth/nextauth";
 import { z } from "zod";
+import bcrypt from "bcrypt";
 
 const updateProfileSchema = z.object({
   firstName: z.string().optional(),
@@ -70,7 +71,7 @@ export async function GET(
   }
 }
 
-// UPDATE user profile
+// PUT handler for updating profile
 export async function PUT(
   req: Request,
   { params }: { params: { userId: string } }
@@ -91,9 +92,50 @@ export async function PUT(
       firstName,
       lastName,
       bio,
+      email,
+      currentPassword,
+      newPassword,
       preferences,
     } = body;
 
+    // If password change is requested
+    if (currentPassword && newPassword) {
+      const user = await prisma.user.findUnique({
+        where: { id: params.userId },
+        select: { password: true }
+      });
+
+      if (!user?.password) {
+        return new NextResponse("User has no password set", { status: 400 });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) {
+        return new NextResponse("Current password is incorrect", { status: 400 });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      await prisma.user.update({
+        where: { id: params.userId },
+        data: { password: hashedPassword }
+      });
+    }
+
+    // If email is being updated, check for uniqueness
+    if (email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          email,
+          NOT: { id: params.userId }
+        }
+      });
+
+      if (existingUser) {
+        return new NextResponse("Email already in use", { status: 400 });
+      }
+    }
+
+    // Update user profile
     const updatedUser = await prisma.user.update({
       where: {
         id: params.userId,
@@ -102,8 +144,9 @@ export async function PUT(
         firstName,
         lastName,
         bio,
+        email,
         preferences,
-        name: `${firstName} ${lastName}`.trim(),
+        name: firstName && lastName ? `${firstName} ${lastName}`.trim() : undefined,
         lastActive: new Date(),
       },
       select: {

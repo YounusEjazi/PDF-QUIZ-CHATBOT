@@ -1,5 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from 'next';
+
+const config: NextConfig = {
   webpack: (config: any) => {
     config.resolve.alias.canvas = false;
     config.resolve.fallback = {
@@ -9,7 +10,7 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: ["lh3.googleusercontent.com", "avatars.githubusercontent.com"],
+    domains: ['www.gravatar.com', 'lh3.googleusercontent.com', 'avatars.githubusercontent.com'],
   },
   typescript: {
     ignoreBuildErrors: true,
@@ -20,9 +21,9 @@ const nextConfig = {
   output: "standalone",
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb", // Erhöhe das Body-Limit auf 10 MB
+      bodySizeLimit: "10mb",
     },
   },
 };
 
-module.exports = nextConfig;
+export default config;
