@@ -200,17 +200,35 @@ const OpenEnded = ({ game }: Props) => {
               <p className="mt-2 text-sm text-gray-500">Saving your results...</p>
             </div>
           ) : (
-            <Link href={`/statistics/${game.id}/`}>
+            <div className="mt-4">
               <Button
+                type="button"
+                onClick={() => {
+                  console.log("Navigating to statistics:", game.id);
+                  router.push(`/statistics/${game.id}`);
+                }}
+                variant="default"
+                size="lg"
                 className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "mt-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                  "relative inline-flex items-center justify-center",
+                  "bg-gradient-to-r from-purple-600 to-pink-600 text-white",
+                  "shadow-lg shadow-purple-500/20",
+                  "hover:shadow-purple-500/40 hover:scale-[1.02]",
+                  "active:scale-[0.98]",
+                  "transition-all duration-200",
+                  "cursor-pointer select-none",
+                  "px-6 py-3",
+                  "rounded-lg",
+                  "font-medium",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                 )}
               >
-                View Statistics
-                <BarChart className="w-4 h-4 ml-2" />
+                <span className="relative z-10">View Statistics</span>
+                <BarChart className="relative z-10 w-4 h-4 ml-2" />
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600/0 to-pink-600/0 hover:from-purple-600/20 hover:to-pink-600/20 transition-colors duration-200" />
               </Button>
-            </Link>
+            </div>
           )}
         </motion.div>
       </div>
@@ -232,7 +250,12 @@ const OpenEnded = ({ game }: Props) => {
   }
 
   return (
-    <div className="absolute -translate-x-1/2 -translate-y-1/2 md:w-[80vw] max-w-4xl w-[90vw] top-1/2 left-1/2">
+    <div className={cn(
+      "absolute -translate-x-1/2 md:w-[80vw] max-w-4xl w-[90vw] left-1/2",
+      showAnswer 
+        ? "relative top-32 mb-32 translate-y-0" 
+        : "-translate-y-1/2 top-1/2 mt-12 mb-16"
+    )}>
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
@@ -249,15 +272,10 @@ const OpenEnded = ({ game }: Props) => {
         <OpenEndedPercentage percentage={Math.round(averagePercentage)} />
       </div>
 
-      <motion.div
-        key={questionIndex}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Card className="mt-4 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-white/20 shadow-xl">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20">
+      <div className="mt-4 space-y-4">
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-white/20 shadow-xl">
+          <CardHeader className="flex flex-row items-start gap-4">
+            <div className="flex items-center justify-center w-12 h-12 shrink-0 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20">
               <CardTitle className="text-center text-gray-700 dark:text-gray-300">
                 <div className="text-lg font-bold">{questionIndex + 1}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -265,77 +283,59 @@ const OpenEnded = ({ game }: Props) => {
                 </div>
               </CardTitle>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1">
               <CardDescription className="text-base text-gray-600 dark:text-gray-400">
                 Fill in the blank in the following sentence:
               </CardDescription>
-              <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+              <p className="text-lg font-medium text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                 {currentQuestion.question}
               </p>
             </div>
           </CardHeader>
         </Card>
 
-        <div className="flex flex-col items-center justify-center w-full mt-4 gap-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`input-${questionIndex}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="w-full"
-            >
-              <BlankAnswerInput
-                setBlankAnswer={setBlankAnswer}
-                answer={currentQuestion.question}
-              />
-            </motion.div>
+        <div className="flex flex-col items-center justify-center w-full gap-4">
+          <div className="w-full">
+            <BlankAnswerInput
+              setBlankAnswer={setBlankAnswer}
+              answer={currentQuestion.question}
+            />
+          </div>
 
-            {showAnswer && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Your Answer:</span>
-                    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">{currentPercentage}% Match</span>
-                  </div>
-                  <p className="text-gray-700 dark:text-gray-300">{blankAnswer}</p>
-                  <div className="pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Correct Answer:</span>
-                    <p className="mt-1 text-green-600 dark:text-green-400">{currentQuestion.answer}</p>
-                  </div>
+          {showAnswer && (
+            <div className="w-full p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Your Answer:</span>
+                  <span className="text-sm font-medium text-purple-600 dark:text-purple-400">{currentPercentage}% Match</span>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{blankAnswer}</p>
+                <div className="pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Correct Answer:</span>
+                  <p className="mt-1 text-green-600 dark:text-green-400 whitespace-pre-wrap">{currentQuestion.answer}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
+          <Button
+            variant="default"
+            size="lg"
+            disabled={isChecking}
+            onClick={handleNext}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
           >
-            <Button
-              variant="default"
-              size="lg"
-              disabled={isChecking}
-              onClick={handleNext}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-            >
-              {isChecking ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <>
-                  {showAnswer ? "Next Question" : "Check Answer"}
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </Button>
-          </motion.div>
+            {isChecking ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <>
+                {showAnswer ? "Next Question" : "Check Answer"}
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </Button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

@@ -285,6 +285,8 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
                         }
                       }
                     }}
+                    readOnly
+                    onKeyDown={(e) => e.preventDefault()}
                   />
                 </div>
                 <Button

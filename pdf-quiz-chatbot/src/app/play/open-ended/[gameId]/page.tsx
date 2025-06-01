@@ -57,7 +57,13 @@ const OpenEndedPage = async ({ params: { gameId } }: Props) => {
     topic: game.topic
   });
 
-  return <OpenEnded game={game} />;
+  return (
+    <div className="min-h-screen flex flex-col relative">
+      <main className="flex-1 relative pb-24">
+        <OpenEnded game={game} />
+      </main>
+    </div>
+  );
 };
 
 export default OpenEndedPage;

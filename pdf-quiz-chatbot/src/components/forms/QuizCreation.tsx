@@ -188,6 +188,8 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
                                 form.setValue("amount", clampedValue);
                               }
                             }}
+                            readOnly
+                            onKeyDown={(e) => e.preventDefault()}
                           />
                         </div>
                         <Button

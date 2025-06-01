@@ -1,4 +1,5 @@
 import React from "react";
+import { cn } from "@/lib/utils/utils";
 
 type Props = {
   answer: string;
@@ -30,26 +31,35 @@ const BlankAnswerInput = ({ answer, setBlankAnswer }: Props) => {
 
   if (parts.length !== 2) {
     return (
-      <div className="text-red-500">
-        Error: Question format is invalid. Please contact support.
+      <div className="p-4 text-center bg-red-500/10 backdrop-blur-sm rounded-xl border border-red-500/20">
+        <p className="text-red-600 dark:text-red-400 font-medium">
+          Error: Question format is invalid. Please contact support.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-start w-full mt-4">
-      <div className="text-xl font-semibold flex items-center flex-wrap">
-        <span>{parts[0]}</span>
+    <div className="w-full p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50">
+      <div className="text-lg text-gray-700 dark:text-gray-300 flex items-center flex-wrap gap-2">
+        <span className="whitespace-pre-wrap">{parts[0]}</span>
         <input
           id="user-blank-input"
-          className="text-center border-b-2 border-black dark:border-white w-40 focus:border-2 focus:border-b-4 focus:outline-none mx-2 px-2 bg-transparent"
+          className={cn(
+            "min-w-[120px] w-auto px-4 py-2 rounded-lg",
+            "bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
+            "border border-gray-200/50 dark:border-gray-700/50",
+            "text-center text-purple-600 dark:text-purple-400 placeholder-gray-400 dark:placeholder-gray-600",
+            "focus:outline-none focus:ring-2 focus:ring-purple-500/20",
+            "transition-all duration-200"
+          )}
           type="text"
-          placeholder="Enter answer"
+          placeholder="Type your answer"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           autoFocus
         />
-        <span>{parts[1]}</span>
+        <span className="whitespace-pre-wrap">{parts[1]}</span>
       </div>
     </div>
   );
