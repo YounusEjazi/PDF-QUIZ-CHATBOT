@@ -9,15 +9,18 @@ import React from "react";
 import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import HotTopicsCard from "@/components/dashboard/HotTopicsCard";
+import { Metadata } from "next";
+import { prisma } from "@/lib/db/db";
+
+export const metadata: Metadata = {
+  title: "Dashboard | PDF Quiz Chatbot",
+  description: "View your quiz history and start new quizzes",
+};
 
 type Props = {
   params: { [key: string]: string | string[] | undefined };
   searchParams: { [key: string]: string | string[] | undefined };
-};
-
-export const metadata = {
-  title: "Dashboard | User",
-  description: "Quiz yourself on anything!",
 };
 
 const Dashboard = async (props: Props) => {
@@ -25,6 +28,8 @@ const Dashboard = async (props: Props) => {
   if (!session?.user) {
     redirect("/");
   }
+
+  const topics = await prisma.topic_count.findMany({});
 
   return (
     <main className="min-h-screen w-full relative overflow-hidden p-4 sm:p-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -45,7 +50,7 @@ const Dashboard = async (props: Props) => {
 
       {/* Main Content */}
       <div className="relative space-y-4">
-        {/* Quick Actions */}
+        {/* Quick Actions - Top Row */}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="p-6 backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
             <QuizMeCard />
@@ -55,12 +60,17 @@ const Dashboard = async (props: Props) => {
           </div>
         </div>
 
-        {/* Activity Section */}
+        {/* Chatbot - Middle Row */}
+        <div className="p-6 backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
+          <ChatbotUI />
+        </div>
+
+        {/* Activity and Topics - Bottom Row */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="lg:col-span-3 p-6 backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
-            <ChatbotUI />
+          <div className="p-6 backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
+            <HotTopicsCard topics={topics} />
           </div>
-          <div className="lg:col-span-2 p-6 backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
+          <div className="p-6 backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
             <RecentActivityCard />
           </div>
         </div>

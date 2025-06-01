@@ -52,10 +52,10 @@ const RecentActivityCard = async (props: Props) => {
           className="text-pink-600 dark:text-pink-400 transition-transform group-hover:scale-110" 
         />
       </CardHeader>
-      <CardContent className="h-[400px] p-0">
+      <CardContent className="h-[320px] p-0">
         <ScrollArea className="h-full rounded-md border border-white/10">
           <div className="p-4">
-            <HistoryComponent limit={10} userId={session.user.id} />
+            <HistoryComponent limit={5} userId={session.user.id} showScrollArea={false} />
           </div>
         </ScrollArea>
       </CardContent>
