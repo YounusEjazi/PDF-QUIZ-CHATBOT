@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/db";
-import { getAuthSession } from "@/lib/nextauth";
+import { prisma } from "@/lib/db/db";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { quizCreationSchema } from "@/schemas/forms/quiz";
 import { NextResponse } from "next/server";
 import { z } from "zod";

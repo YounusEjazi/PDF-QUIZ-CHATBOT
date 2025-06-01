@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { ArrowUp, Paperclip, Square } from "lucide-react"
 import { omit } from "remeda"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/utils"
 import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea"
 import { Button } from "@/components/ui/button"
 import { FilePreview } from "@/components/ui/file-preview"

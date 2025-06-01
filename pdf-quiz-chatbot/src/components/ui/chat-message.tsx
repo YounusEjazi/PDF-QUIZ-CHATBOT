@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { FilePreview } from "@/components/ui/file-preview";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 

@@ -1,5 +1,5 @@
-import { getAuthSession } from "@/lib/nextauth";
-import { prisma } from "@/lib/db";
+import { getAuthSession } from "@/lib/auth/nextauth";
+import { prisma } from "@/lib/db/db";
 import { redirect } from "next/navigation";
 import { DashboardTabs } from "@/components/DashboardTabs";
 
@@ -7,6 +7,7 @@ type Props = {
   params: {
     userId: string;
   };
+  searchParams: { [key: string]: string | string[] | undefined };
 };
 
 async function getUserData(userId: string) {
@@ -45,7 +46,7 @@ async function getUserData(userId: string) {
   });
 }
 
-export default async function UserProfile({ params: { userId } }: Props) {
+export default async function UserProfile({ params: { userId }, searchParams }: Props) {
   const session = await getAuthSession();
   if (!session?.user) {
     return redirect("/");
@@ -66,9 +67,12 @@ export default async function UserProfile({ params: { userId } }: Props) {
     }))
   };
 
+  // Get the tab from search params, defaulting to "stats"
+  const initialTab = (searchParams.tab === "settings" ? "settings" : "stats") as "stats" | "settings";
+
   return (
     <div className="container mx-auto py-8">
-      <DashboardTabs user={formattedUser} />
+      <DashboardTabs user={formattedUser} initialTab={initialTab} />
     </div>
   );
 }

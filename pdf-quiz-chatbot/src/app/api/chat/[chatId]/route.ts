@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getAuthSession } from "@/lib/nextauth";
+import { prisma } from "@/lib/db/db";
+import { getAuthSession } from "@/lib/auth/nextauth";
 
 export async function PATCH(req: Request, { params }: { params: { chatId: string } }) {
   const { chatId } = params;

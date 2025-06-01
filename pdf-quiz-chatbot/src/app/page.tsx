@@ -1,6 +1,6 @@
 import SignInButton from "@/components/SignInButton";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/nextauth";
+import { authOptions } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import { ArrowRight, Brain, FileText, MessageSquare, Target } from "lucide-react";
 

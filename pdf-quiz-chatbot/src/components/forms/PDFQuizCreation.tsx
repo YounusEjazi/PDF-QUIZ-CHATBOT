@@ -147,161 +147,174 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
     <div className="w-full max-w-4xl px-4 pb-40 mx-auto">
       <div className="flex flex-col items-center gap-y-10">
         {/* Upload + Config Card */}
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">PDF Quiz Creation</CardTitle>
-            <CardDescription>Upload a PDF to generate a quiz.</CardDescription>
+        <Card className="w-full backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
+          <CardHeader className="space-y-1 border-b border-gray-200 dark:border-gray-700">
+            <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+              PDF Quiz Creation
+            </CardTitle>
+            <CardDescription className="text-gray-500 dark:text-gray-400">
+              Upload a PDF to generate a quiz
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Button variant="secondary" onClick={toggleMode} className="w-full">
-                Switch to Form Quiz Creation
-              </Button>
+          <CardContent className="p-6 space-y-6">
+            <Button 
+              variant="secondary" 
+              onClick={toggleMode} 
+              className="w-full bg-white/50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200"
+            >
+              Switch to Form Quiz Creation
+            </Button>
 
-              {/* Upload File Button with Dropdown */}
-              <div className="relative">
-                <Button
-                  variant="default"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full"
-                >
-                  <FilePlus className="mr-2" />
-                  {file ? file.name : "Upload File"}
-                  <ChevronUp
-                    className={`ml-2 transform transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
-                  />
-                </Button>
-                {dropdownOpen && (
-                  <div className="absolute z-10 p-4 bg-white dark:bg-gray-800 border rounded-lg shadow-lg w-48">
-                    <label className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 cursor-pointer">
-                      <FilePlus className="h-4 w-4" />
-                      <span>Upload from PC</span>
-                      <input
-                        type="file"
-                        accept=".pdf"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                      />
-                    </label>
-                    <button
-                      onClick={() => alert("External Link Upload Coming Soon!")}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-                    >
-                      <Link className="h-4 w-4" />
-                      <span>Upload Link</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Topic Field */}
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                  Topic
-                </label>
-                <Input
-                  placeholder="Enter topic"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                />
-              </div>
-
-              {/* Page Range Input */}
-              {file && totalPages > 0 && (
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                    Select Pages (e.g., 1-3, 5, 7-8)
-                  </label>
-                  <Input
-                    placeholder="Enter page numbers or ranges"
-                    onChange={(e) => handlePageRangeInput(e.target.value)}
-                  />
-                  <p className="mt-1 text-sm text-gray-500">
-                    Total pages: {totalPages}. Select up to 10 pages.
-                  </p>
-                  {selectedPages.length > 0 && (
-                    <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                      Selected pages: {selectedPages.join(", ")}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Number of Questions */}
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                  Number of Questions (3-10)
-                </label>
-                <Input
-                  type="number"
-                  min={3}
-                  max={10}
-                  value={amount}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value, 10);
-                    if (!isNaN(value)) {
-                      if (value < 3) {
-                        setAmount(3);
-                        toast({
-                          title: "Minimum Questions",
-                          description: "You must generate at least 3 questions.",
-                          variant: "destructive",
-                        });
-                      } else if (value > 10) {
-                        setAmount(10);
-                        toast({
-                          title: "Maximum Questions",
-                          description: "You can generate up to 10 questions.",
-                          variant: "destructive",
-                        });
-                      } else {
-                        setAmount(value);
-                      }
-                    }
-                  }}
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Generate between 3 and 10 questions from the selected pages.
-                </p>
-              </div>
-
-              {/* Language */}
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                  Language
-                </label>
-                <Select onValueChange={setLanguage} defaultValue={language}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="english">English</SelectItem>
-                    <SelectItem value="german">German</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Submit */}
+            {/* Upload File Button with Dropdown */}
+            <div className="relative">
               <Button
                 variant="default"
-                onClick={handleSubmit}
-                disabled={status === "pending" || selectedPages.length === 0}
-                className="w-full"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
               >
-                {selectedPages.length === 0 ? "Select pages to continue" : "Submit"}
+                <FilePlus className="mr-2" />
+                {file ? file.name : "Upload File"}
+                <ChevronUp
+                  className={`ml-2 transform transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+                />
               </Button>
+              {dropdownOpen && (
+                <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-lg backdrop-blur-xl">
+                  <label className="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                    <FilePlus className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span className="text-gray-700 dark:text-gray-300">Upload from PC</span>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                  <button
+                    onClick={() => alert("External Link Upload Coming Soon!")}
+                    className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors border-t border-gray-200/50 dark:border-gray-700/50"
+                  >
+                    <Link className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span className="text-gray-700 dark:text-gray-300">Upload Link</span>
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Topic Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Topic
+              </label>
+              <Input
+                placeholder="Enter topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200"
+              />
+            </div>
+
+            {/* Page Range Input */}
+            {file && totalPages > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Select Pages (e.g., 1-3, 5, 7-8)
+                </label>
+                <Input
+                  placeholder="Enter page numbers or ranges"
+                  onChange={(e) => handlePageRangeInput(e.target.value)}
+                  className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200"
+                />
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Total pages: {totalPages}. Select up to 10 pages.
+                </p>
+                {selectedPages.length > 0 && (
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    Selected pages: {selectedPages.join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Number of Questions */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Number of Questions (3-10)
+              </label>
+              <Input
+                type="number"
+                min={3}
+                max={10}
+                value={amount}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  if (!isNaN(value)) {
+                    if (value < 3) {
+                      setAmount(3);
+                      toast({
+                        title: "Minimum Questions",
+                        description: "You must generate at least 3 questions.",
+                        variant: "destructive",
+                      });
+                    } else if (value > 10) {
+                      setAmount(10);
+                      toast({
+                        title: "Maximum Questions",
+                        description: "You can generate up to 10 questions.",
+                        variant: "destructive",
+                      });
+                    } else {
+                      setAmount(value);
+                    }
+                  }
+                }}
+                className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200"
+              />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Generate between 3 and 10 questions from the selected pages.
+              </p>
+            </div>
+
+            {/* Language */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Language
+              </label>
+              <Select onValueChange={setLanguage} defaultValue={language}>
+                <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus:ring-purple-500/20">
+                  <SelectValue placeholder="Select Language" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50">
+                  <SelectItem value="english">English</SelectItem>
+                  <SelectItem value="german">German</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Submit */}
+            <Button
+              variant="default"
+              onClick={handleSubmit}
+              disabled={status === "pending" || selectedPages.length === 0}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            >
+              {selectedPages.length === 0 ? "Select pages to continue" : "Create Quiz"}
+            </Button>
           </CardContent>
         </Card>
 
         {/* PDF Preview Card */}
         {file && (
-          <Card className="w-full max-w-4xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-bold">PDF Preview</CardTitle>
-              <CardDescription>Preview of selected pages from your PDF</CardDescription>
+          <Card className="w-full backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
+            <CardHeader className="space-y-1 border-b border-gray-200 dark:border-gray-700">
+              <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+                PDF Preview
+              </CardTitle>
+              <CardDescription className="text-gray-500 dark:text-gray-400">
+                Preview of selected pages from your PDF
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-2">
+            <CardContent className="p-6">
               <div className="w-full flex justify-center">
                 <PDFViewer
                   file={file}

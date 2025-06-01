@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getAuthSession } from "@/lib/nextauth";
+import { prisma } from "@/lib/db/db";
+import { getAuthSession } from "@/lib/auth/nextauth";
 
 // Fetch all chats
 export async function GET() {
@@ -58,6 +58,5 @@ export async function POST() {
     );
   }
 }
-
 
 

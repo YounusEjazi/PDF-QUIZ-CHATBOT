@@ -1,8 +1,8 @@
 "use client";
-import { cn, formatTimeDelta } from "@/lib/utils";
+import { cn, formatTimeDelta } from "@/lib/utils/utils";
 import { Game, Question } from "@prisma/client";
 import { differenceInSeconds } from "date-fns";
-import { BarChart, ChevronRight, Loader2, Timer } from "lucide-react";
+import { BarChart, ChevronRight, Loader2, Timer, Trophy, Sparkles } from "lucide-react";
 import React from "react";
 import {
   Card,
@@ -18,6 +18,8 @@ import { z } from "zod";
 import { checkAnswerSchema, endGameSchema } from "@/schemas/questions";
 import axios, { AxiosError } from "axios";
 import { useToast } from "../../src/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 type Props = {
@@ -29,26 +31,40 @@ interface CheckAnswerResponse {
 }
 
 const OpenEnded = ({ game }: Props) => {
+  const router = useRouter();
   const [hasEnded, setHasEnded] = React.useState(false);
   const [questionIndex, setQuestionIndex] = React.useState(0);
   const [blankAnswer, setBlankAnswer] = React.useState("");
   const [averagePercentage, setAveragePercentage] = React.useState(0);
   const [totalCorrect, setTotalCorrect] = React.useState(0);
-
-  console.log("Total questions:", game.questions.length);
-  console.log("Current question index:", questionIndex);
+  const [showAnswer, setShowAnswer] = React.useState(false);
+  const [currentPercentage, setCurrentPercentage] = React.useState<number | null>(null);
 
   const currentQuestion = React.useMemo(() => {
     return game.questions[questionIndex];
   }, [questionIndex, game.questions]);
 
-  const { mutate: endGame } = useMutation({
+  const { mutate: endGame, isPending: isEnding } = useMutation({
     mutationFn: async () => {
+      console.log("Starting endGame mutation for game:", game.id);
       const payload: z.infer<typeof endGameSchema> = {
         gameId: game.id,
       };
       const response = await axios.post(`/api/endGame`, payload);
+      console.log("endGame response:", response.data);
       return response.data;
+    },
+    onSuccess: (data) => {
+      console.log("endGame mutation successful:", data);
+      setHasEnded(true);
+    },
+    onError: (error) => {
+      console.error("Failed to end game:", error);
+      toast({
+        title: "Error",
+        description: "Failed to end game. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -80,12 +96,13 @@ const OpenEnded = ({ game }: Props) => {
   }, [hasEnded]);
 
   const moveToNextQuestion = React.useCallback(() => {
+    setShowAnswer(false);
+    setCurrentPercentage(null);
     if (questionIndex < game.questions.length - 1) {
       setQuestionIndex(prev => prev + 1);
       setBlankAnswer("");
     } else {
       endGame();
-      setHasEnded(true);
     }
   }, [questionIndex, game.questions.length, endGame]);
 
@@ -96,6 +113,11 @@ const OpenEnded = ({ game }: Props) => {
         description: "No question found",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (showAnswer) {
+      moveToNextQuestion();
       return;
     }
 
@@ -110,23 +132,17 @@ const OpenEnded = ({ game }: Props) => {
 
     checkAnswer(undefined, {
       onSuccess: ({ percentageSimilar }) => {
+        setCurrentPercentage(percentageSimilar);
+        setShowAnswer(true);
         const isCorrectEnough = percentageSimilar >= 70;
         if (isCorrectEnough) {
           setTotalCorrect(prev => prev + 1);
         }
 
-        toast({
-          title: isCorrectEnough ? "Correct!" : "Not quite right",
-          description: `The correct answer was: ${currentQuestion.answer}`,
-          variant: isCorrectEnough ? "default" : "destructive",
-        });
-
         setAveragePercentage(prev => {
           const newTotal = prev * questionIndex + percentageSimilar;
           return newTotal / (questionIndex + 1);
         });
-
-        moveToNextQuestion();
       },
       onError: (error: Error | AxiosError) => {
         console.error(error);
@@ -140,7 +156,7 @@ const OpenEnded = ({ game }: Props) => {
         });
       },
     });
-  }, [checkAnswer, currentQuestion, blankAnswer, toast, questionIndex, moveToNextQuestion]);
+  }, [checkAnswer, currentQuestion, blankAnswer, toast, questionIndex, moveToNextQuestion, showAnswer]);
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -156,83 +172,170 @@ const OpenEnded = ({ game }: Props) => {
 
   if (hasEnded) {
     return (
-      <div className="absolute flex flex-col justify-center -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-        <div className="px-4 py-2 mt-2 font-semibold text-white bg-green-500 rounded-md whitespace-nowrap">
-          You completed {game.questions.length} questions in{" "}
-          {formatTimeDelta(differenceInSeconds(now, game.timeStarted))}
-        </div>
-        <div className="px-4 py-2 mt-2 font-semibold text-white bg-blue-500 rounded-md whitespace-nowrap">
-          You got {totalCorrect} out of {game.questions.length} correct! ({Math.round(averagePercentage)}% average)
-        </div>
-        <Link
-          href={`/statistics/${game.id}`}
-          className={cn(buttonVariants({ size: "lg" }), "mt-2")}
+      <div className="absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="relative p-8 overflow-hidden text-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl"
         >
-          View Statistics
-          <BarChart className="w-4 h-4 ml-2" />
-        </Link>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20" />
+          <Trophy className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
+          <h2 className="mb-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">
+            Quiz Completed!
+          </h2>
+          <div className="space-y-3">
+            <p className="text-gray-600 dark:text-gray-300">
+              Time: {formatTimeDelta(differenceInSeconds(now, game.timeStarted))}
+            </p>
+            <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300">
+              <Sparkles className="w-5 h-5 text-yellow-500" />
+              <span>
+                Score: {totalCorrect} out of {game.questions.length} ({Math.round(averagePercentage)}% average)
+              </span>
+            </div>
+          </div>
+          {isEnding ? (
+            <div className="mt-6">
+              <Loader2 className="w-8 h-8 mx-auto animate-spin text-purple-600" />
+              <p className="mt-2 text-sm text-gray-500">Saving your results...</p>
+            </div>
+          ) : (
+            <Link href={`/statistics/${game.id}/`}>
+              <Button
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "mt-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                )}
+              >
+                View Statistics
+                <BarChart className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          )}
+        </motion.div>
       </div>
     );
   }
 
   if (!currentQuestion) {
     return (
-      <div className="absolute flex flex-col justify-center -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-        <div className="px-4 py-2 mt-2 font-semibold text-red-500 rounded-md whitespace-nowrap">
-          No questions found
-        </div>
+      <div className="absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-4 text-center bg-red-500/10 backdrop-blur-sm rounded-xl border border-red-500/20"
+        >
+          <p className="text-red-600 dark:text-red-400 font-medium">No questions found</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
     <div className="absolute -translate-x-1/2 -translate-y-1/2 md:w-[80vw] max-w-4xl w-[90vw] top-1/2 left-1/2">
-      <div className="flex flex-row justify-between">
-        <div className="flex flex-col">
-          <p>
-            <span className="text-slate-400">Topic</span> &nbsp;
-            <span className="px-2 py-1 text-white rounded-lg bg-slate-800">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">Topic:</span>
+            <span className="px-3 py-1 text-sm font-medium text-white rounded-xl bg-gradient-to-r from-purple-600 to-pink-600">
               {game.topic}
             </span>
-          </p>
-          <div className="flex self-start mt-3 text-slate-400">
-            <Timer className="mr-2" />
+          </div>
+          <div className="flex items-center text-gray-500 dark:text-gray-400">
+            <Timer className="w-4 h-4 mr-2" />
             {formatTimeDelta(differenceInSeconds(now, game.timeStarted))}
           </div>
         </div>
         <OpenEndedPercentage percentage={Math.round(averagePercentage)} />
       </div>
-      <Card className="w-full mt-4">
-        <CardHeader className="flex flex-row items-center">
-          <CardTitle className="mr-5 text-center divide-y divide-zinc-600/50">
-            <div>{questionIndex + 1}</div>
-            <div className="text-base text-slate-400">
-              {game.questions.length}
+
+      <motion.div
+        key={questionIndex}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="mt-4 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-white/20 shadow-xl">
+          <CardHeader className="flex flex-row items-center gap-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20">
+              <CardTitle className="text-center text-gray-700 dark:text-gray-300">
+                <div className="text-lg font-bold">{questionIndex + 1}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {game.questions.length}
+                </div>
+              </CardTitle>
             </div>
-          </CardTitle>
-          <CardDescription className="flex-grow text-lg">
-            Fill in the blank in the following sentence:
-          </CardDescription>
-        </CardHeader>
-        <div className="p-4 pt-0">
-          <p className="text-lg font-medium">{currentQuestion.question}</p>
+            <div className="space-y-2">
+              <CardDescription className="text-base text-gray-600 dark:text-gray-400">
+                Fill in the blank in the following sentence:
+              </CardDescription>
+              <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                {currentQuestion.question}
+              </p>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <div className="flex flex-col items-center justify-center w-full mt-4 gap-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`input-${questionIndex}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="w-full"
+            >
+              <BlankAnswerInput
+                setBlankAnswer={setBlankAnswer}
+                answer={currentQuestion.question}
+              />
+            </motion.div>
+
+            {showAnswer && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Your Answer:</span>
+                    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">{currentPercentage}% Match</span>
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300">{blankAnswer}</p>
+                  <div className="pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Correct Answer:</span>
+                    <p className="mt-1 text-green-600 dark:text-green-400">{currentQuestion.answer}</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <Button
+              variant="default"
+              size="lg"
+              disabled={isChecking}
+              onClick={handleNext}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            >
+              {isChecking ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <>
+                  {showAnswer ? "Next Question" : "Check Answer"}
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </motion.div>
         </div>
-      </Card>
-      <div className="flex flex-col items-center justify-center w-full mt-4">
-        <BlankAnswerInput
-          setBlankAnswer={setBlankAnswer}
-          answer={currentQuestion.question}
-        />
-        <Button
-          variant="outline"
-          className="mt-4"
-          disabled={isChecking || hasEnded}
-          onClick={handleNext}
-        >
-          {isChecking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Next <ChevronRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
+      </motion.div>
     </div>
   );
 };

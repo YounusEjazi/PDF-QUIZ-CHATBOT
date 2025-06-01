@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db"; // Adjust this to your Prisma client path
-import { getAuthSession } from "@/lib/nextauth";
+import { prisma } from "@/lib/db/db"; // Adjust this to your Prisma client path
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { z } from "zod";
 
 const updateProfileSchema = z.object({

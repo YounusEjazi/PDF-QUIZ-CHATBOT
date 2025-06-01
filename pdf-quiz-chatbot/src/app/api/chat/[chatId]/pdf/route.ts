@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from "uuid";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { generateEmbeddings } from "@/lib/openai";
-import { prisma } from "@/lib/db";
+import { generateEmbeddings } from "@/lib/ai/openai";
+import { prisma } from "@/lib/db/db";
 
 const PDF_SUCCESS_MESSAGE = "📚 PDF processed successfully! I've analyzed the document and I'm ready to answer your questions about it.";
 

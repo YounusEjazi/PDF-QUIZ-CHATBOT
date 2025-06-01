@@ -4,11 +4,11 @@ import { v4 as uuidv4 } from "uuid";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { generateEmbeddings } from "@/lib/openai";
-import { prisma } from "@/lib/db"; // Import Prisma client
-import { strict_output } from "@/lib/gpt";
+import { generateEmbeddings } from "@/lib/ai/openai";
+import { prisma } from "@/lib/db/db"; // Import Prisma client
+import { strict_output } from "@/lib/ai/gpt";
 import { z } from "zod";
-import { getAuthSession } from "@/lib/nextauth";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { GameType, Prisma } from "@prisma/client";
 
 // Define types for chunks

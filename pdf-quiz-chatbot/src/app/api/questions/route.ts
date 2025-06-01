@@ -1,5 +1,5 @@
-import { strict_output } from "@/lib/gpt";
-import { getAuthSession } from "@/lib/nextauth";
+import { strict_output } from "@/lib/ai/gpt";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { getQuestionsSchema } from "@/schemas/questions";
 import { NextResponse } from "next/server";
 import { ZodError, z } from "zod";

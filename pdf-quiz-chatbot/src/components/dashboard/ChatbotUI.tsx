@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { MessageSquareDashed, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 const ChatbotUI = () => {
   const router = useRouter();
@@ -18,7 +18,7 @@ const ChatbotUI = () => {
   
       if (response.ok) {
         const data = await response.json();
-        router.push(`/chatbot/${data.chatId}`);
+        router.push(`/chatbot/${data.id}`);
       } else {
         console.error("Failed to create a new chat");
       }

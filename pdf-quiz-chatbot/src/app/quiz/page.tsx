@@ -1,4 +1,4 @@
-import { getAuthSession } from "@/lib/nextauth";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import QuizSwitcher from "@/components/QuizSwitscher";
 

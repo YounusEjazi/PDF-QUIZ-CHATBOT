@@ -34,10 +34,11 @@ type DashboardTabsProps = {
     lastQuizDate: string | null;
     games: Game[];
   };
+  initialTab?: "stats" | "settings";
 };
 
-export function DashboardTabs({ user }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<"stats" | "settings">("stats");
+export function DashboardTabs({ user, initialTab = "stats" }: DashboardTabsProps) {
+  const [activeTab, setActiveTab] = useState<"stats" | "settings">(initialTab);
 
   return (
     <div className="px-4 sm:px-6 md:px-8 py-4 md:py-6 space-y-6">

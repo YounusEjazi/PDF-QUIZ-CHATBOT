@@ -2,7 +2,7 @@ import React, { Suspense } from "react"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/utils"
 import { CopyButton } from "@/components/ui/copy-button"
 
 interface MarkdownRendererProps {

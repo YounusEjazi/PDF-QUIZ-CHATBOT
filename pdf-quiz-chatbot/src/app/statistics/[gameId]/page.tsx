@@ -1,6 +1,6 @@
 import { buttonVariants } from "@/components/ui/button";
-import { prisma } from "@/lib/db";
-import { getAuthSession } from "@/lib/nextauth";
+import { prisma } from "@/lib/db/db";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { LucideLayoutDashboard } from "lucide-react";
 import Link from "next/link";
 
@@ -18,8 +18,10 @@ type Props = {
 };
 
 const Statistics = async ({ params: { gameId } }: Props) => {
+  console.log("Loading statistics page for gameId:", gameId);
   const session = await getAuthSession();
   if (!session?.user) {
+    console.log("No authenticated user found");
     return redirect("/");
   }
   const game = await prisma.game.findUnique({
@@ -27,8 +29,18 @@ const Statistics = async ({ params: { gameId } }: Props) => {
     include: { questions: true },
   });
   if (!game) {
+    console.log("Game not found:", gameId);
     return redirect("/");
   }
+
+  console.log("Found game:", {
+    id: game.id,
+    type: game.gameType,
+    questionCount: game.questions.length,
+    timeStarted: game.timeStarted,
+    timeEnded: game.timeEnded,
+    score: game.score
+  });
 
   let accuracy: number = 0;
 
@@ -47,6 +59,8 @@ const Statistics = async ({ params: { gameId } }: Props) => {
     accuracy = totalPercentage / game.questions.length;
   }
   accuracy = Math.round(accuracy * 100) / 100;
+
+  console.log("Calculated accuracy:", accuracy);
 
   return (
     <>

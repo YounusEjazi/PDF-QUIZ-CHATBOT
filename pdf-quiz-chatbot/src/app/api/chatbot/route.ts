@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { strict_output } from "@/lib/gpt2"; 
-import { prisma } from "@/lib/db";
+import { strict_output } from "@/lib/ai/gpt2"; 
+import { prisma } from "@/lib/db/db";
 
 export const POST = async (req: Request) => {
   try {

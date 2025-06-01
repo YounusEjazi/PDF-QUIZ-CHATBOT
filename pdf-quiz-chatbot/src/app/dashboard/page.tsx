@@ -3,7 +3,7 @@ import HistoryCard from "@/components/dashboard/HistoryCard";
 import ChatbotUI from "@/components/dashboard/ChatbotUI";
 import QuizMeCard from "@/components/dashboard/QuizMeCard";
 import RecentActivityCard from "@/components/dashboard/RecentActivityCard";
-import { getAuthSession } from "@/lib/nextauth";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import React from "react";
 import { LogOut, Settings, User } from "lucide-react";

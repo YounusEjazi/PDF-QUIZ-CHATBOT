@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db/db";
 
 // Fetch messages
 export async function GET(req: Request, { params }: { params: { chatId: string } }) {

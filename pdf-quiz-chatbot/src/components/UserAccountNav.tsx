@@ -83,7 +83,7 @@ const UserAccountNav = ({ user }: Props) => {
         {/* Settings Link */}
         <DropdownMenuItem asChild>
           <Link
-            href="/settings"
+            href={`/userprofile/${user.id}?tab=settings`}
             className="w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md px-2 py-2 transition flex items-center gap-2"
           >
             <Settings className="w-4 h-4" />

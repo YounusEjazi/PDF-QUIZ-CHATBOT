@@ -1,6 +1,6 @@
 import OpenEnded from "@/components/OpenEnded";
-import { prisma } from "@/lib/db";
-import { getAuthSession } from "@/lib/nextauth";
+import { prisma } from "@/lib/db/db";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import React from "react";
 

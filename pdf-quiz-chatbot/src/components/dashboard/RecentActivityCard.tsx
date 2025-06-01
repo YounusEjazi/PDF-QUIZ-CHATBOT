@@ -7,13 +7,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { getAuthSession } from "@/lib/nextauth";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import HistoryComponent from "../HistoryComponent";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db/db";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Activity } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 type Props = {};
 
