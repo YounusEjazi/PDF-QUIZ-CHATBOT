@@ -1,8 +1,8 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { type ThemeProviderProps } from "next-themes/dist/types";
+import { ThemeProviderProps } from "next-themes";
 import {
   QueryClient,
   QueryClientProvider,
@@ -11,10 +11,23 @@ import {
 const queryClient = new QueryClient();
 
 const Providers = ({ children }: ThemeProviderProps) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
-        <SessionProvider>{children}</SessionProvider>
+      <NextThemesProvider 
+        attribute="class" 
+        defaultTheme="light" 
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>
+          <SessionProvider>{children}</SessionProvider>
+        </div>
       </NextThemesProvider>
     </QueryClientProvider>
   );

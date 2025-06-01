@@ -9,6 +9,7 @@ import SignInButton from "./SignInButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { Menu, X, Home, User, Settings, MessageSquare, LogOut, LayoutDashboard } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { cn } from "@/lib/utils/utils";
 
 interface ExtendedUser {
   id: string;
@@ -108,7 +109,7 @@ const Navbar = () => {
           {/* Sidebar */}
           <div className="fixed right-0 top-0 h-full w-[250px] bg-white/80 dark:bg-gray-950/80 backdrop-blur-lg z-[20] md:hidden border-l border-zinc-300 dark:border-zinc-700 shadow-xl">
             <div className="flex flex-col h-full">
-              {/* User Profile Section */}
+              {/* Top Section with Logo and User/Auth */}
               <div className="p-6 border-b border-zinc-300 dark:border-zinc-700">
                 {status === "loading" ? (
                   <p className="text-gray-600 dark:text-gray-300 text-sm">Loading...</p>
@@ -132,11 +133,22 @@ const Navbar = () => {
                     </div>
                   </div>
                 ) : (
-                  <SignInButton text="Sign In" />
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="w-[100px]">
+                      <Image
+                        src="/Logo_Universität_Siegen.svg"
+                        alt="Logo"
+                        width={100}
+                        height={67}
+                        className="w-full h-auto rounded-md dark:brightness-0 dark:invert"
+                      />
+                    </div>
+                    <SignInButton text="Sign In" />
+                  </div>
                 )}
               </div>
 
-              {/* Navigation Links */}
+              {/* Navigation Links - Only show when authenticated */}
               {user && (
                 <div className="flex-1 py-6 px-4">
                   <nav className="space-y-2">
@@ -187,8 +199,11 @@ const Navbar = () => {
               )}
 
               {/* Bottom Section */}
-              <div className="p-4 border-t border-zinc-300 dark:border-zinc-700">
-                <div className="flex items-center justify-between">
+              <div className="mt-auto p-4 border-t border-zinc-300 dark:border-zinc-700">
+                <div className={cn(
+                  "flex items-center",
+                  user ? "justify-between" : "justify-center"
+                )}>
                   <ThemeToggle />
                   {user && (
                     <button

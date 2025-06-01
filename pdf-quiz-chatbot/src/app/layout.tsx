@@ -19,11 +19,15 @@ export default function RootLayout({
   const isChatRoute = pathname?.startsWith("/chatbot");
 
   return (
-    <html lang="en" className={inter.className}>
-      <body className={cn(
-        "antialiased min-h-screen",
-        isChatRoute ? "overflow-hidden" : "flex flex-col"
-      )}>
+    <html lang="en" suppressHydrationWarning>
+      <body 
+        className={cn(
+          inter.className,
+          "antialiased min-h-screen",
+          isChatRoute ? "overflow-hidden" : "flex flex-col"
+        )}
+        suppressHydrationWarning
+      >
         <Providers>
           {!isChatRoute && <Navbar />}
           <main className={cn(

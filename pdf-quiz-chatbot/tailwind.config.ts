@@ -75,7 +75,12 @@ export default {
   		animation: {
   			wobble: 'wobble 1s ease-in-out infinite',
   			'gradient-move': 'gradientMove 15s ease infinite',
-  			'typing-dot-bounce': 'typing-dot-bounce 1.25s ease-out infinite'
+  			'typing-dot-bounce': 'typing-dot-bounce 1.25s ease-out infinite',
+  			"accordion-down": "accordion-down 0.2s ease-out",
+  			"accordion-up": "accordion-up 0.2s ease-out",
+  			"fadeIn": "fadeIn 0.3s ease-out forwards",
+  			"scaleIn": "scaleIn 0.5s ease-out forwards",
+  			"checkmark": "checkmark 0.3s ease-out forwards 0.2s",
   		},
   		keyframes: {
   			wobble: {
@@ -113,7 +118,28 @@ export default {
   				'20%': {
   					transform: 'translateY(-0.25rem)'
   				}
-  			}
+  			},
+  			"accordion-down": {
+  				from: { height: "0" },
+  				to: { height: "var(--radix-accordion-content-height)" },
+  			},
+  			"accordion-up": {
+  				from: { height: "var(--radix-accordion-content-height)" },
+  				to: { height: "0" },
+  			},
+  			fadeIn: {
+  				'0%': { opacity: '0' },
+  				'100%': { opacity: '1' },
+  			},
+  			scaleIn: {
+  				'0%': { transform: 'scale(0)' },
+  				'70%': { transform: 'scale(1.2)' },
+  				'100%': { transform: 'scale(1)' },
+  			},
+  			checkmark: {
+  				'0%': { transform: 'scale(0.5)', opacity: '0' },
+  				'100%': { transform: 'scale(1)', opacity: '1' },
+  			},
   		}
   	}
   },

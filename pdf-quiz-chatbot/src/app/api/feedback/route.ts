@@ -6,7 +6,7 @@ import prisma from "@/lib/db/prisma";
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const { content, rating, category } = await req.json();
+    const { content, rating, category, isAnonymous } = await req.json();
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -15,14 +15,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Store feedback in database with user information if available
+    // Store feedback in database with user information if available and not anonymous
     const feedback = await prisma.feedback.create({
       data: {
         content,
         rating,
         category,
-        userId: session?.user?.id,
-        userEmail: session?.user?.email || null,
+        isAnonymous: isAnonymous || false,
+        userId: !isAnonymous ? session?.user?.id : null,
+        userEmail: !isAnonymous ? session?.user?.email : null,
       },
     });
 

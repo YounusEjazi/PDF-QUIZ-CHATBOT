@@ -53,8 +53,22 @@ import {
   Users,
   MessageCircle,
   BarChart3,
-  Clock
+  Clock,
+  MoreVertical,
+  Settings,
+  UserCog,
+  Tag
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { UserDetailsDialog } from "./UserDetailsDialog";
+import { FeedbackDialog } from "./FeedbackDialog";
 
 type Game = {
   id: string;
@@ -113,6 +127,7 @@ export function AdminDashboard() {
     lastName: "",
     bio: "",
   });
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -216,6 +231,88 @@ export function AdminDashboard() {
     setIsViewingDetails(true);
   };
 
+  // Mobile-friendly user card component
+  const UserCard = ({ user }: { user: User }) => (
+    <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
+              {user.name?.[0]?.toUpperCase() || "U"}
+            </div>
+            <div>
+              <p className="font-medium">{user.name || "N/A"}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>User Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => openUserDetails(user)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <UserCog className="mr-2 h-4 w-4" />
+                <Select
+                  defaultValue={user.role}
+                  onValueChange={(value) => handleRoleUpdate(user.id, value)}
+                  disabled={isUpdatingRole}
+                >
+                  <SelectTrigger className="w-full border-none p-0 h-auto font-normal">
+                    <SelectValue placeholder="Change Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USER">User</SelectItem>
+                    <SelectItem value="MODERATOR">Moderator</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600 dark:text-red-400"
+                onClick={() => {
+                  setSelectedUser(user);
+                  setShowDeleteDialog(true);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete User
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Role</p>
+            <p className="text-sm font-medium">{user.role}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Points</p>
+            <p className="text-sm font-medium">{user.totalPoints}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Quizzes</p>
+            <p className="text-sm font-medium">{user.quizzesTaken}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Last Active</p>
+            <p className="text-sm font-medium">
+              {new Date(user.lastActive).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -227,16 +324,16 @@ export function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 sm:px-0">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 sm:px-0">
         <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                <h3 className="text-2xl font-bold mt-2">{users.length}</h3>
+                <h3 className="text-xl sm:text-2xl font-bold mt-1 sm:mt-2">{users.length}</h3>
               </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -293,7 +390,7 @@ export function AdminDashboard() {
 
       {/* Main Content */}
       <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-200 dark:border-gray-700 shadow-lg mx-4 sm:mx-0">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2 lg:w-[400px] mb-4">
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -307,8 +404,9 @@ export function AdminDashboard() {
             </TabsList>
 
             <TabsContent value="users" className="space-y-4">
-              <div className="rounded-lg border bg-card">
-                <ScrollArea className="h-[500px] sm:h-[600px]">
+              {/* Desktop View */}
+              <div className="hidden sm:block rounded-lg border bg-card">
+                <ScrollArea className="h-[600px]">
                   <div className="min-w-[600px]">
                     <Table>
                       <TableHeader className="sticky top-0 bg-card z-10">
@@ -416,6 +514,13 @@ export function AdminDashboard() {
                   </div>
                 </ScrollArea>
               </div>
+
+              {/* Mobile View */}
+              <div className="sm:hidden space-y-4">
+                {users.map((user) => (
+                  <UserCard key={user.id} user={user} />
+                ))}
+              </div>
             </TabsContent>
 
             <TabsContent value="feedback">
@@ -448,16 +553,16 @@ export function AdminDashboard() {
                                   <p className="font-medium">
                                     {item.user?.name || "Anonymous"}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {item.user?.email || item.userEmail || "No email"}
-                                  </p>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
-                                {item.category}
-                              </span>
+                            <TableCell className="pl-0">
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <Tag className="w-3 h-3 text-blue-500" />
+                                <span className="font-medium bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-400 dark:to-blue-600 bg-clip-text text-transparent">
+                                  {item.category}
+                                </span>
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center">
@@ -474,7 +579,9 @@ export function AdminDashboard() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <p className="line-clamp-2 max-w-[200px] sm:max-w-none">{item.content}</p>
+                              <p className="line-clamp-2 max-w-[200px] sm:max-w-none">
+                                {item.content}
+                              </p>
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               {new Date(item.createdAt).toLocaleDateString()}
@@ -491,184 +598,56 @@ export function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Feedback Dialog */}
-      <Dialog open={!!selectedFeedback} onOpenChange={(open) => !open && setSelectedFeedback(null)}>
-        <DialogContent className="sm:max-w-[600px]">
+      {/* Delete User Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Feedback Details</DialogTitle>
+            <DialogTitle>Delete User</DialogTitle>
             <DialogDescription>
-              Submitted on {selectedFeedback && new Date(selectedFeedback.createdAt).toLocaleString()}
+              Are you sure you want to delete this user? This action cannot be undone.
+              All their data, including quiz history and progress, will be permanently deleted.
             </DialogDescription>
           </DialogHeader>
-          {selectedFeedback && (
-            <div className="space-y-6">
-              {/* User Info */}
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  {selectedFeedback.user?.name?.[0]?.toUpperCase() || "A"}
-                </div>
-                <div>
-                  <p className="font-medium">{selectedFeedback.user?.name || "Anonymous"}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedFeedback.user?.email || selectedFeedback.userEmail || "No email"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Rating and Category */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Rating</p>
-                  <div className="flex items-center">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star
-                        key={index}
-                        className={`w-5 h-5 ${
-                          index < selectedFeedback.rating
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300 dark:text-gray-600"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Category</p>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
-                    {selectedFeedback.category}
-                  </span>
-                </div>
-              </div>
-
-              {/* Feedback Content */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Feedback</p>
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm whitespace-pre-wrap">{selectedFeedback.content}</p>
-                </div>
-              </div>
-            </div>
-          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedUser) {
+                  handleDeleteUser(selectedUser.id);
+                  setShowDeleteDialog(false);
+                }
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete User"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Feedback Dialog */}
+      <FeedbackDialog
+        feedback={selectedFeedback}
+        isOpen={!!selectedFeedback}
+        onOpenChange={(open) => !open && setSelectedFeedback(null)}
+      />
 
       {/* User Details Dialog */}
-      <Dialog open={isViewingDetails} onOpenChange={setIsViewingDetails}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="grid gap-6">
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-200 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle>Profile Information</CardTitle>
-                  <CardDescription>Edit user's profile details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="firstName">First Name</label>
-                      <Input
-                        id="firstName"
-                        value={editForm.firstName}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="lastName">Last Name</label>
-                      <Input
-                        id="lastName"
-                        value={editForm.lastName}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="bio">Bio</label>
-                    <Textarea
-                      id="bio"
-                      value={editForm.bio}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
-                    />
-                  </div>
-                  <Button onClick={() => handleUpdateProfile(selectedUser.id)}>
-                    Save Changes
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-200 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle>Activity Overview</CardTitle>
-                  <CardDescription>User's activity statistics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                      <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-medium">Games</span>
-                      </div>
-                      <p className="text-2xl font-bold mt-2">{selectedUser._count.games}</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/20">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                        <span className="text-sm font-medium">Chats</span>
-                      </div>
-                      <p className="text-2xl font-bold mt-2">{selectedUser._count.chats}</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-green-600 dark:text-green-400" />
-                        <span className="text-sm font-medium">Points</span>
-                      </div>
-                      <p className="text-2xl font-bold mt-2">{selectedUser.totalPoints}</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                        <span className="text-sm font-medium">Quizzes</span>
-                      </div>
-                      <p className="text-2xl font-bold mt-2">{selectedUser.quizzesTaken}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-200 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle>Recent Games</CardTitle>
-                  <CardDescription>Last 5 games played</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {selectedUser.games.map((game) => (
-                      <div key={game.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-gray-900/50">
-                        <div>
-                          <p className="font-medium">{game.topic}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(game.timeStarted).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{game.score ? `${game.score}%` : 'Incomplete'}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {game.timeEnded ? 
-                              `${Math.round((new Date(game.timeEnded).getTime() - new Date(game.timeStarted).getTime()) / 60000)}min` 
-                              : 'In Progress'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <UserDetailsDialog
+        user={selectedUser}
+        isOpen={isViewingDetails}
+        onOpenChange={setIsViewingDetails}
+        onUpdateProfile={handleUpdateProfile}
+        editForm={editForm}
+        setEditForm={setEditForm}
+      />
     </div>
   );
 } 

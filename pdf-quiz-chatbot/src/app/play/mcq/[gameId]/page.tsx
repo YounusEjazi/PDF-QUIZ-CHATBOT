@@ -10,6 +10,9 @@ type Props = {
   };
 };
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const MCQPage = async ({ params: { gameId } }: Props) => {
   const session = await getAuthSession();
   if (!session?.user) {
@@ -30,7 +33,9 @@ const MCQPage = async ({ params: { gameId } }: Props) => {
       },
     },
   });
-  if (!game || game.gameType === "open_ended") {
+
+  if (!game || !game.questions || game.questions.length === 0 || game.gameType === "open_ended") {
+    console.error("Invalid game data:", { gameId, game });
     return redirect("/quiz");
   }
 

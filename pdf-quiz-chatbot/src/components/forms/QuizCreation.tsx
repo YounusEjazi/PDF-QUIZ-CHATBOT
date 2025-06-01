@@ -108,10 +108,10 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
   }
 
   return (
-    <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 w-full max-w-lg px-4">
+    <div className="w-full max-w-lg mx-auto">
       <Card className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
         <CardHeader className="space-y-1 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="space-y-1">
               <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
                 Quiz Creation
@@ -160,19 +160,50 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
                   <FormItem>
                     <FormLabel className="text-gray-700 dark:text-gray-300">Number of Questions</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="How many questions?"
-                        type="number"
-                        {...field}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          const clampedValue = Math.min(Math.max(value, 3), 10);
-                          form.setValue("amount", clampedValue);
-                        }}
-                        min={3}
-                        max={10}
-                        className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50"
+                          onClick={() => {
+                            const newValue = Math.max(3, Number(field.value) - 1);
+                            form.setValue("amount", newValue);
+                          }}
+                          disabled={field.value <= 3}
+                        >
+                          <span className="text-lg font-semibold">-</span>
+                        </Button>
+                        <div className="relative flex-1">
+                          <Input
+                            {...field}
+                            type="number"
+                            min={3}
+                            max={10}
+                            className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200 text-center"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (!isNaN(value)) {
+                                const clampedValue = Math.min(Math.max(value, 3), 10);
+                                form.setValue("amount", clampedValue);
+                              }
+                            }}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50"
+                          onClick={() => {
+                            const newValue = Math.min(10, Number(field.value) + 1);
+                            form.setValue("amount", newValue);
+                          }}
+                          disabled={field.value >= 10}
+                        >
+                          <span className="text-lg font-semibold">+</span>
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormDescription className="text-gray-500 dark:text-gray-400">
                       Choose between 3 and 10 questions for your quiz.

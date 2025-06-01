@@ -3,13 +3,13 @@ import { prisma } from "@/lib/db/db";
 import { getAuthSession } from "@/lib/auth/nextauth";
 import { LucideLayoutDashboard } from "lucide-react";
 import Link from "next/link";
-
 import { redirect } from "next/navigation";
 import React from "react";
 import ResultsCard from "@/components/statistics/ResultsCard";
 import AccuracyCard from "@/components/statistics/AccuracyCard";
 import TimeTakenCard from "@/components/statistics/TimeTakenCard";
 import QuestionsList from "@/components/statistics/QuestionsList";
+import { cn } from "@/lib/utils/utils";
 
 type Props = {
   params: {
@@ -63,19 +63,31 @@ const Statistics = async ({ params: { gameId } }: Props) => {
   console.log("Calculated accuracy:", accuracy);
 
   return (
-    <>
-      <div className="p-8 mx-auto max-w-7xl">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Summary</h2>
-          <div className="flex items-center space-x-2">
-            <Link href="/dashboard" className={buttonVariants()}>
-              <LucideLayoutDashboard className="mr-2" />
-              Back to Dashboard
-            </Link>
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+            Quiz Summary
+          </h2>
+          <Link 
+            href="/dashboard" 
+            className={cn(
+              buttonVariants({ variant: "default", size: "sm" }),
+              "bg-gradient-to-r from-purple-600 to-pink-600 text-white",
+              "shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40",
+              "hover:scale-[1.02] active:scale-[0.98]",
+              "transition-all duration-200",
+              "text-sm sm:text-base",
+              "h-9 sm:h-10",
+              "px-3 sm:px-4"
+            )}
+          >
+            <LucideLayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5" />
+            Dashboard
+          </Link>
         </div>
 
-        <div className="grid gap-4 mt-4 md:grid-cols-7">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-7">
           <ResultsCard accuracy={accuracy} />
           <AccuracyCard accuracy={accuracy} />
           <TimeTakenCard
@@ -85,7 +97,7 @@ const Statistics = async ({ params: { gameId } }: Props) => {
         </div>
         <QuestionsList questions={game.questions} />
       </div>
-    </>
+    </div>
   );
 };
 

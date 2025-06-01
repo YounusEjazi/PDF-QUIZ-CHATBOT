@@ -18,8 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Star } from "lucide-react";
+import { MessageSquare, Star, Check } from "lucide-react";
 import { toast } from "sonner";
+
+const SuccessAnimation = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm animate-fadeIn">
+    <div className="bg-white dark:bg-gray-800 rounded-full p-4 animate-scaleIn">
+      <div className="animate-checkmark">
+        <Check className="w-12 h-12 text-green-500" />
+      </div>
+    </div>
+  </div>
+);
 
 const categories = [
   "General Feedback",
@@ -27,17 +37,29 @@ const categories = [
   "Feature Request",
   "UI/UX",
   "Performance",
+  "Bachelorarbeit Review",
   "Other",
 ];
 
 export default function FeedbackPage() {
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({
     content: "",
     category: "General Feedback",
     rating: 5,
+    isAnonymous: false,
   });
+
+  const resetForm = () => {
+    setFormData({
+      content: "",
+      category: "General Feedback",
+      rating: 5,
+      isAnonymous: false,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,12 +74,16 @@ export default function FeedbackPage() {
 
       if (!response.ok) throw new Error("Failed to submit feedback");
 
+      // Show success animation
+      setShowSuccess(true);
+      
+      // Hide animation and reset form after delay
+      setTimeout(() => {
+        setShowSuccess(false);
+        resetForm();
+      }, 1500);
+
       toast.success("Thank you for your feedback!");
-      setFormData({
-        content: "",
-        category: "General Feedback",
-        rating: 5,
-      });
     } catch (error) {
       toast.error("Failed to submit feedback. Please try again.");
     } finally {
@@ -67,6 +93,8 @@ export default function FeedbackPage() {
 
   return (
     <main className="min-h-screen w-full relative overflow-hidden p-4 sm:p-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {showSuccess && <SuccessAnimation />}
+
       {/* Animated Gradient Orbs */}
       <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 dark:bg-purple-900/50 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-blob" />
       <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 dark:bg-blue-900/50 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-xl opacity-70 animate-blob animation-delay-2000" />
@@ -144,6 +172,23 @@ export default function FeedbackPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Anonymous Toggle */}
+              {session && (
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Submit Anonymously
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={formData.isAnonymous}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isAnonymous: e.target.checked })
+                    }
+                    className="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
+                  />
+                </div>
+              )}
 
               {/* Feedback Content */}
               <div className="space-y-2">

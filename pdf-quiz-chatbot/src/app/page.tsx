@@ -43,15 +43,15 @@ export default async function Home() {
 
       <div className="relative max-w-5xl w-full space-y-20">
         {/* Hero Section */}
-        <div className="text-center space-y-6">
-          <h1 className="text-5xl sm:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+        <div className="text-center space-y-6 pt-16 sm:pt-20">
+          <h1 className="text-4xl sm:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 px-4">
             PDF Quiz Chatbot
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Transform your learning experience with AI-powered quizzes and intelligent assistance
           </p>
           <div className="pt-4">
-            <SignInButton text="Get Started" />
+            <SignInButton text="Get Started" variant="hero" />
           </div>
         </div>
 

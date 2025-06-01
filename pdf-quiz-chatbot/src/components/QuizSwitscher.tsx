@@ -12,12 +12,14 @@ const QuizSwitcher = ({ topic }: { topic: string }) => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full min-h-screen py-10 px-4">
-      {isPDFMode ? (
-        <PDFQuizCreation toggleMode={toggleMode} />
-      ) : (
-        <QuizCreation topic={topic} toggleMode={toggleMode} />
-      )}
+    <div className="flex-1 w-full max-w-screen-xl mx-auto pt-20 pb-16 px-4 sm:px-6 md:px-8">
+      <div className="relative min-h-[calc(100vh-9rem)] flex items-center justify-center">
+        {isPDFMode ? (
+          <PDFQuizCreation toggleMode={toggleMode} />
+        ) : (
+          <QuizCreation topic={topic} toggleMode={toggleMode} />
+        )}
+      </div>
     </div>
   );
 };

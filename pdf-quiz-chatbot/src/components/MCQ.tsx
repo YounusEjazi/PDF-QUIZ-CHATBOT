@@ -17,7 +17,7 @@ import MCQCounter from "./MCQCounter";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { z } from "zod";
-import { useToast } from "../../src/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -37,26 +37,29 @@ const MCQ = ({ game }: Props) => {
   const [now, setNow] = React.useState(new Date());
   const [showAnswer, setShowAnswer] = React.useState(false);
   const [isCorrect, setIsCorrect] = React.useState<boolean | null>(null);
+  const { toast } = useToast();
 
   const currentQuestion = React.useMemo(() => {
     return game.questions[questionIndex];
   }, [questionIndex, game.questions]);
 
   const options = React.useMemo(() => {
-    if (!currentQuestion) return [];
-    if (!currentQuestion.options) return [];
+    if (!currentQuestion?.options) return [];
     try {
+      if (Array.isArray(currentQuestion.options)) {
+        return currentQuestion.options;
+      }
       const optionsStr = currentQuestion.options.toString()
         .replace(/'/g, '"')
         .replace(/\\/g, '');
-      return JSON.parse(optionsStr) as string[];
+      const parsed = JSON.parse(optionsStr);
+      return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
-      console.error("Failed to parse options:", error);
+      console.error("Failed to parse options:", error, currentQuestion.options);
       return [];
     }
   }, [currentQuestion]);
 
-  const { toast } = useToast();
   const { mutate: checkAnswer, isPending: isChecking } = useMutation({
     mutationFn: async () => {
       const payload: z.infer<typeof checkAnswerSchema> = {
@@ -103,6 +106,7 @@ const MCQ = ({ game }: Props) => {
 
   const handleNext = React.useCallback(() => {
     if (!currentQuestion || !options || options.length === 0) {
+      console.error("Invalid question or options:", { currentQuestion, options });
       toast({
         title: "Error",
         description: "No valid question or options found",
@@ -116,9 +120,11 @@ const MCQ = ({ game }: Props) => {
         endGame();
       } else {
         setQuestionIndex((prev) => prev + 1);
-        setShowAnswer(false);
-        setSelectedChoice(0);
-        setIsCorrect(null);
+        setTimeout(() => {
+          setShowAnswer(false);
+          setSelectedChoice(0);
+          setIsCorrect(null);
+        }, 0);
       }
       return;
     }
@@ -187,17 +193,35 @@ const MCQ = ({ game }: Props) => {
               <p className="mt-2 text-sm text-gray-500">Saving your results...</p>
             </div>
           ) : (
-            <Link href={`/statistics/${game.id}/`}>
+            <div className="mt-4">
               <Button
+                type="button"
+                onClick={() => {
+                  console.log("Navigating to statistics:", game.id);
+                  router.push(`/statistics/${game.id}`);
+                }}
+                variant="default"
+                size="lg"
                 className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                  "relative inline-flex items-center justify-center",
+                  "bg-gradient-to-r from-purple-600 to-pink-600 text-white",
+                  "shadow-lg shadow-purple-500/20",
+                  "hover:shadow-purple-500/40 hover:scale-[1.02]",
+                  "active:scale-[0.98]",
+                  "transition-all duration-200",
+                  "cursor-pointer select-none",
+                  "px-6 py-3",
+                  "rounded-lg",
+                  "font-medium",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                 )}
               >
-                View Statistics
-                <BarChart className="w-4 h-4 ml-2" />
+                <span className="relative z-10">View Statistics</span>
+                <BarChart className="relative z-10 w-4 h-4" />
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600/0 to-pink-600/0 hover:from-purple-600/20 hover:to-pink-600/20 transition-colors duration-200" />
               </Button>
-            </Link>
+            </div>
           )}
         </motion.div>
       </div>

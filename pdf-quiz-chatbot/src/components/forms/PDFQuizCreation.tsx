@@ -144,17 +144,21 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
   }
 
   return (
-    <div className="w-full max-w-4xl px-4 pb-40 mx-auto">
-      <div className="flex flex-col items-center gap-y-10">
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="flex flex-col items-center gap-6 sm:gap-8">
         {/* Upload + Config Card */}
         <Card className="w-full backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
           <CardHeader className="space-y-1 border-b border-gray-200 dark:border-gray-700">
-            <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
-              PDF Quiz Creation
-            </CardTitle>
-            <CardDescription className="text-gray-500 dark:text-gray-400">
-              Upload a PDF to generate a quiz
-            </CardDescription>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+                  PDF Quiz Creation
+                </CardTitle>
+                <CardDescription className="text-gray-500 dark:text-gray-400">
+                  Upload a PDF to generate a quiz
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <Button 
@@ -241,35 +245,59 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Number of Questions (3-10)
               </label>
-              <Input
-                type="number"
-                min={3}
-                max={10}
-                value={amount}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value, 10);
-                  if (!isNaN(value)) {
-                    if (value < 3) {
-                      setAmount(3);
-                      toast({
-                        title: "Minimum Questions",
-                        description: "You must generate at least 3 questions.",
-                        variant: "destructive",
-                      });
-                    } else if (value > 10) {
-                      setAmount(10);
-                      toast({
-                        title: "Maximum Questions",
-                        description: "You can generate up to 10 questions.",
-                        variant: "destructive",
-                      });
-                    } else {
-                      setAmount(value);
-                    }
-                  }
-                }}
-                className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200"
-              />
+              <div className="flex items-center space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50"
+                  onClick={() => setAmount(Math.max(3, amount - 1))}
+                  disabled={amount <= 3}
+                >
+                  <span className="text-lg font-semibold">-</span>
+                </Button>
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    min={3}
+                    max={10}
+                    value={amount}
+                    className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200 text-center"
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (!isNaN(value)) {
+                        if (value < 3) {
+                          setAmount(3);
+                          toast({
+                            title: "Minimum Questions",
+                            description: "You must generate at least 3 questions.",
+                            variant: "destructive",
+                          });
+                        } else if (value > 10) {
+                          setAmount(10);
+                          toast({
+                            title: "Maximum Questions",
+                            description: "You can generate up to 10 questions.",
+                            variant: "destructive",
+                          });
+                        } else {
+                          setAmount(value);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50"
+                  onClick={() => setAmount(Math.min(10, amount + 1))}
+                  disabled={amount >= 10}
+                >
+                  <span className="text-lg font-semibold">+</span>
+                </Button>
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Generate between 3 and 10 questions from the selected pages.
               </p>
@@ -314,7 +342,7 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
                 Preview of selected pages from your PDF
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="w-full flex justify-center">
                 <PDFViewer
                   file={file}

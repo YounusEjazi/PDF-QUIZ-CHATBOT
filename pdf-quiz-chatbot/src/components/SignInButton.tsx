@@ -1,55 +1,46 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import AuthModal from "./AuthModal";
+import { useRouter } from "next/navigation";
 
-type Props = { text: string };
+type Props = { 
+  text: string;
+  variant?: 'navbar' | 'hero';
+};
 
-const SignInButton = ({ text }: Props) => {
+const SignInButton = ({ text, variant = 'navbar' }: Props) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
-  const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl: "/", prompt: "select_account" });
-  };
-
-  const handleEmailSignIn = () => {
-    router.push("/auth/register");
+  const handleClick = () => {
+    if (variant === 'hero') {
+      router.push('/auth/register');
+    } else {
+      setIsModalOpen(true);
+    }
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        {/* Main Button */}
-        <Button variant="outline" size="sm" className="flex items-center">
-          {text} <ChevronDown className="ml-2 h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {/* Dropdown Menu Items */}
-        <DropdownMenuItem onClick={handleGoogleSignIn}>
-          Sign in with Google
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleEmailSignIn}>
-          Sign in with Email
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Link href="/auth/register" className="w-full text-left">
-            Sign-In/Up
-          </Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <Button
+        onClick={handleClick}
+        size="lg"
+        className={
+          variant === 'hero' 
+            ? "relative px-8 py-6 text-base sm:text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white border-2 border-transparent transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-xl rounded-full"
+            : "relative px-4 py-2 text-sm font-medium bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all"
+        }
+      >
+        {text}
+      </Button>
+
+      <AuthModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
   );
 };
 

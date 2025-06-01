@@ -195,6 +195,7 @@ model Feedback {
   content   String
   rating    Int       @default(5)
   category  String    @default("General Feedback")
+  isAnonymous Boolean @default(false)
   userId    String?
   userEmail String?
   user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
