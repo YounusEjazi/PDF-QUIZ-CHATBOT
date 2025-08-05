@@ -37,6 +37,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentChatId, setCurrentChatId] = useState<string | null>(chatId || null);
   const [creatingChat, setCreatingChat] = useState(false);
+  const [isNewChat, setIsNewChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -44,7 +45,16 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   console.log('ChatPage rendered with chatId:', chatId, 'currentChatId:', currentChatId);
 
   const { chatState, sendMessage, fetchMessages, retry } = useChat(currentChatId || "temp");
-  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(currentChatId || "temp");
+  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(
+    currentChatId || "temp",
+    (fileName: string) => {
+      // Send the custom message that the user wrote
+      if (inputValue.trim()) {
+        sendMessage(inputValue.trim());
+        setInputValue(""); // Clear the input after sending
+      }
+    }
+  );
   const { chatsState, createChat, deleteChat, updateChatName } = useChats();
 
   const scrollToBottom = useCallback(() => {
@@ -62,6 +72,24 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     }
   }, [fetchMessages, currentChatId]);
 
+  // Reset isNewChat when navigating to an existing chat
+  useEffect(() => {
+    if (chatId && chatId !== currentChatId) {
+      setIsNewChat(false);
+    }
+  }, [chatId, currentChatId]);
+
+  // Detect if this is a new chat (no messages yet)
+  useEffect(() => {
+    if (chatId && chatState.messages.length === 0 && !chatState.loading) {
+      console.log('Detected new chat with no messages, showing welcome screen');
+      setIsNewChat(true);
+    } else if (chatId && chatState.messages.length > 0) {
+      console.log('Chat has messages, hiding welcome screen');
+      setIsNewChat(false);
+    }
+  }, [chatId, chatState.messages.length, chatState.loading]);
+
   const createNewChat = useCallback(async () => {
     try {
       console.log('Creating new chat...');
@@ -74,6 +102,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         console.log('Created new chat with ID:', newChatId);
         setCurrentChatId(newChatId);
         setCreatingChat(false);
+        setIsNewChat(true);
+        console.log('Set isNewChat to true');
         return newChatId;
       } else {
         throw new Error('Invalid response format');
@@ -87,14 +117,15 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
 
   const handleCreateNewChat = useCallback(async () => {
     try {
-      const newChat = await createChat("New Chat");
-      if (newChat) {
-        router.push(`/chatbot/${newChat.id}`);
+      const newChatId = await createNewChat();
+      if (newChatId) {
+        // Don't redirect, let the component handle the state
+        console.log('New chat created with ID:', newChatId);
       }
     } catch (error) {
       console.error('Failed to create new chat:', error);
     }
-  }, [createChat, router]);
+  }, [createNewChat]);
 
   const handleDeleteChat = useCallback(async (chatIdToDelete: string) => {
     try {
@@ -116,6 +147,10 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     }
   }, [updateChatName]);
 
+  const handleStartChat = useCallback(() => {
+    setIsNewChat(false);
+  }, []);
+
   const handlePromptSelect = useCallback(async (prompt: string) => {
     console.log('Prompt selected:', prompt);
     setInputValue(prompt);
@@ -127,12 +162,14 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         // Wait a bit for the chat to be created, then send the message
         setTimeout(() => {
           sendMessage(prompt);
+          setIsNewChat(false); // Exit welcome screen
         }, 100);
       } catch (error) {
         console.error('Failed to create chat:', error);
       }
     } else {
       sendMessage(prompt);
+      setIsNewChat(false); // Exit welcome screen
     }
   }, [sendMessage, currentChatId, createNewChat]);
 
@@ -148,6 +185,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         setTimeout(() => {
           sendMessage(inputValue);
           setInputValue("");
+          setIsNewChat(false); // Exit welcome screen
         }, 100);
       } catch (error) {
         console.error('Failed to create chat:', error);
@@ -155,6 +193,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     } else {
       sendMessage(inputValue);
       setInputValue("");
+      setIsNewChat(false); // Exit welcome screen
     }
   }, [inputValue, chatState.loading, sendMessage, currentChatId, createNewChat]);
 
@@ -169,19 +208,15 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     console.log('Submitting file...');
     try {
       await handleSubmitFile();
-      // Add a success message to the chat
-      const botMessage = {
-        id: Date.now().toString(),
-        sender: "bot" as const,
-        content: "📚 PDF processed successfully! I've analyzed the document and I'm ready to answer your questions about it.",
-        createdAt: new Date(),
-      };
-      // Note: The message will be added to the chat state in the hook
+      // The message will be sent automatically via the onUploadSuccess callback
+      // Clear the input and file after successful upload
+      setInputValue("");
+      clearFile();
     } catch (error) {
       console.error('File submit error:', error);
       // Error is already handled in the hook
     }
-  }, [handleSubmitFile]);
+  }, [handleSubmitFile, clearFile]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -203,6 +238,16 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     chatsCount: chatsState.chats.length
   });
 
+  // Debug chats loading
+  useEffect(() => {
+    console.log('Chats state:', {
+      loading: chatsState.loading,
+      error: chatsState.error,
+      count: chatsState.chats.length,
+      chats: chatsState.chats
+    });
+  }, [chatsState]);
+
   // Show loading state while creating chat
   if (creatingChat) {
     return (
@@ -215,14 +260,22 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     );
   }
 
-  // Show welcome screen when no chat is selected and no chats exist
-  if (!currentChatId && chatsState.chats.length === 0 && !chatsState.loading) {
+  // Show welcome screen when no chat is selected and no chats exist, or when a new chat is created
+  if ((!currentChatId && chatsState.chats.length === 0 && !chatsState.loading) || (isNewChat && chatState.messages.length === 0)) {
+    console.log('Showing welcome screen:', {
+      currentChatId,
+      chatsCount: chatsState.chats.length,
+      loading: chatsState.loading,
+      isNewChat,
+      messagesCount: chatState.messages.length
+    });
     return (
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Sidebar */}
+        {/* Sidebar - Always show actual chat list */}
         <div className={cn(
           "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "lg:translate-x-0", // Always visible on desktop
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hidden on mobile when closed, but always visible on desktop
         )}>
           <div className="flex flex-col h-full">
             {/* Header */}
@@ -244,7 +297,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setSidebarOpen(false)}
-                    className="lg:hidden"
+                    className="lg:hidden" // Only show on mobile
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -252,12 +305,112 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
               </div>
             </div>
 
-            {/* Empty Chat List */}
+            {/* Chat List */}
             <div className="flex-1 overflow-y-auto p-4">
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No chats yet</p>
-                <p className="text-xs">Start a conversation to see your chats here</p>
+              {chatsState.loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                </div>
+              ) : chatsState.error ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                  <p className="text-sm text-red-600 dark:text-red-400">{chatsState.error}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {chatsState.chats.map((chat) => (
+                    <ChatListItem
+                      key={chat.id}
+                      chat={chat}
+                      isActive={chat.id === currentChatId}
+                      onSelect={(chatId) => router.push(`/chatbot/${chatId}`)}
+                      onDelete={handleDeleteChat}
+                      onUpdateName={handleUpdateChatName}
+                      formatDate={formatDate}
+                    />
+                  ))}
+                  
+                  {chatsState.chats.length === 0 && (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No chats yet</p>
+                      <p className="text-xs">Start a conversation to see your chats here</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* File Upload */}
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="space-y-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">
+                  Upload a PDF and write a message to send to the bot
+                </div>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  className="w-full"
+                  disabled={fileUpload.uploading || !currentChatId || currentChatId === "temp"}
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {fileUpload.uploading ? "Processing PDF..." : "Upload PDF & Ask Bot"}
+                </Button>
+                
+                {fileUpload.file && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-blue-900 dark:text-blue-100 truncate">
+                        {fileUpload.file.name}
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        {fileUpload.uploading ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={clearFile}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Message input for PDF */}
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Write your message about this PDF..."
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        className="text-sm"
+                        disabled={fileUpload.uploading}
+                      />
+                      <Button
+                        onClick={handleFileSubmit}
+                        disabled={fileUpload.uploading || !inputValue.trim()}
+                        className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {fileUpload.uploading ? "Processing..." : "Send PDF & Message"}
+                      </Button>
+                    </div>
+                    
+                    {fileUpload.uploading && (
+                      <div className="mt-2">
+                        <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1">
+                          <div 
+                            className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                            style={{ width: `${fileUpload.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -338,6 +491,16 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                 </Button>
               </div>
 
+              {/* Start Chat Button */}
+              <div className="mt-6">
+                <Button
+                  onClick={handleStartChat}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
+                >
+                  Start Chat
+                </Button>
+              </div>
+
               {/* Or start with custom message */}
               <div className="mt-8">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -369,10 +532,11 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar */}
+      {/* Sidebar - Always visible on desktop, hidden on mobile when closed */}
       <div className={cn(
         "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "lg:translate-x-0", // Always visible on desktop
+        sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hidden on mobile when closed, but always visible on desktop
       )}>
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -394,7 +558,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setSidebarOpen(false)}
-                  className="lg:hidden"
+                  className="lg:hidden" // Only show on mobile
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -441,6 +605,9 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
           {/* File Upload */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <div className="space-y-3">
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">
+                Upload a PDF and write a message to send to the bot
+              </div>
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
@@ -448,12 +615,12 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                 disabled={fileUpload.uploading || !currentChatId || currentChatId === "temp"}
               >
                 <FileUp className="w-4 h-4 mr-2" />
-                Upload PDF
+                {fileUpload.uploading ? "Processing PDF..." : "Upload PDF & Ask Bot"}
               </Button>
               
               {fileUpload.file && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-sm text-blue-900 dark:text-blue-100 truncate">
                       {fileUpload.file.name}
                     </span>
@@ -470,17 +637,29 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleFileSubmit}
-                            className="h-6 px-2 text-xs"
-                          >
-                            Upload
-                          </Button>
                         </>
                       )}
                     </div>
                   </div>
+                  
+                  {/* Message input for PDF */}
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Write your message about this PDF..."
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      className="text-sm"
+                      disabled={fileUpload.uploading}
+                    />
+                    <Button
+                      onClick={handleFileSubmit}
+                      disabled={fileUpload.uploading || !inputValue.trim()}
+                      className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {fileUpload.uploading ? "Processing..." : "Send PDF & Message"}
+                    </Button>
+                  </div>
+                  
                   {fileUpload.uploading && (
                     <div className="mt-2">
                       <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1">
@@ -512,9 +691,23 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Chat
-              </h2>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Chat
+                </h2>
+                {fileUpload.uploading && (
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                    <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" />
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Processing PDF...</span>
+                  </div>
+                )}
+                {currentChatId && chatState.messages.some(msg => msg.content.includes('PDF processed successfully')) && (
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/20 rounded-full">
+                    <FileUp className="w-3 h-3 text-green-600 dark:text-green-400" />
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">Document Ready</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* Error Banner */}
@@ -549,10 +742,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
           {chatState.messages.map((message) => (
             <div
               key={message.id}
-              className={cn(
-                "flex items-start space-x-3",
-                message.sender === "user" ? "justify-end" : "justify-start"
-              )}
+              className="flex items-start justify-center space-x-3 max-w-4xl mx-auto"
             >
               {message.sender === "bot" && (
                 <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
@@ -561,17 +751,19 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
               )}
               
               <div className={cn(
-                "max-w-[80%] rounded-lg px-4 py-2",
+                "flex-1 max-w-3xl",
                 message.sender === "user"
-                  ? "bg-purple-600 text-white"
+                  ? "bg-purple-600 text-white rounded-lg px-4 py-2"
                   : message.error
-                    ? "bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
-                    : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                    ? "bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-lg px-4 py-2"
+                    : "text-gray-900 dark:text-gray-100"
               )}>
                 {message.sender === "bot" ? (
-                  <MarkdownRenderer content={message.content} />
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <MarkdownRenderer content={message.content} />
+                  </div>
                 ) : (
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                 )}
               </div>
 
@@ -585,11 +777,11 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
 
           {/* Typing Indicator */}
           {chatState.isTyping && (
-            <div className="flex items-start space-x-3">
+            <div className="flex items-start justify-center space-x-3 max-w-4xl mx-auto">
               <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2">
+              <div className="flex-1 max-w-3xl">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />

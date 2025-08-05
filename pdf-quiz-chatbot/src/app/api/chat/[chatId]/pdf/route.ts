@@ -63,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
 
     const indexName = process.env.PINECONE_INDEX_NAME || "quickstart";
     const index = pinecone.index(indexName);
-    const namespace = "chatbot-pdf";
+    const namespace = `chat-${chatId}`; // Use chat-specific namespace
 
     const pineconeVectors = embeddings.map((values, idx) => ({
       id: `vec-${uuidv4()}`,
@@ -71,6 +71,8 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
       metadata: {
         text: chunks[idx].pageContent,
         pageNumber: chunks[idx].metadata.pageNumber,
+        chatId: chatId, // Store chatId in metadata for better organization
+        fileName: uploadedFile.name,
       },
     }));
 

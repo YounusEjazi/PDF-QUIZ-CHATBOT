@@ -20,8 +20,27 @@ export async function strict_output(
     throw new Error("DeepSeek API key is not configured in environment variables.");
   }
 
+  // Check if user is specifically asking for JSON
+  const userMessage = Array.isArray(user_prompt) ? user_prompt.join("\n") : user_prompt;
+  const isAskingForJSON = userMessage.toLowerCase().includes('json') || 
+                          userMessage.toLowerCase().includes('format') ||
+                          userMessage.toLowerCase().includes('structure');
+
+  console.log('GPT2: User message:', userMessage);
+  console.log('GPT2: Is asking for JSON:', isAskingForJSON);
+
   for (let i = 0; i < num_tries; i++) {
     try {
+      let systemContent = system_prompt;
+      
+      if (isAskingForJSON) {
+        // If user is asking for JSON, provide actual JSON content, not wrapped in answer field
+        systemContent = `${system_prompt}\nThe user is asking for JSON content. Provide a valid JSON object or array that demonstrates JSON structure. Do not wrap it in an "answer" field. Return the JSON directly.`;
+      } else {
+        // If user is asking for regular text, just provide a helpful response
+        systemContent = `${system_prompt}\nProvide a clear, helpful response in plain text. Do not use JSON format unless specifically requested.`;
+      }
+
       const response = await axios.post(
         "https://api.deepseek.com/v1/chat/completions", // Adjust endpoint based on DeepSeek docs
         {
@@ -30,13 +49,11 @@ export async function strict_output(
           messages: [
             {
               role: "system",
-              content: `${system_prompt}\nOutput response that is either plain text or matches this JSON structure: ${JSON.stringify(
-                output_format
-              )}.`,
+              content: systemContent,
             },
             {
               role: "user",
-              content: Array.isArray(user_prompt) ? user_prompt.join("\n") : user_prompt,
+              content: userMessage,
             },
           ],
         },
@@ -54,17 +71,17 @@ export async function strict_output(
         console.log("Raw DeepSeek Response:", rawResponse);
       }
 
-      try {
-        const parsedResponse = JSON.parse(rawResponse);
-        return parsedResponse.answer ?? JSON.stringify(parsedResponse);
-      } catch {
-        // Return raw response if JSON parsing fails
+      if (isAskingForJSON) {
+        // For JSON requests, return the raw response (should be actual JSON)
+        return rawResponse;
+      } else {
+        // For regular text requests, return the raw response
         return rawResponse;
       }
     } catch (error) {
-      console.error(`Attempt ${i + 1} failed:`, error.message);
-      if (error.response) {
-        console.error("DeepSeek API Error:", error.response.data);
+      console.error(`Attempt ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown error');
+      if (error && typeof error === 'object' && 'response' in error) {
+        console.error("DeepSeek API Error:", (error as any).response?.data);
       }
     }
   }

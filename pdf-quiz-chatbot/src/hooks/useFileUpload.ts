@@ -10,7 +10,7 @@ export type FileUploadState = {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export const useFileUpload = (chatId: string) => {
+export const useFileUpload = (chatId: string, onUploadSuccess?: (fileName: string) => void) => {
   const [fileUpload, setFileUpload] = useState<FileUploadState>({
     file: null,
     progress: 0,
@@ -72,6 +72,11 @@ export const useFileUpload = (chatId: string) => {
       setFileUpload({ file: null, progress: 0, uploading: false });
       toast.success("PDF processed successfully!");
       
+      // Call the success callback if provided
+      if (onUploadSuccess) {
+        onUploadSuccess(fileUpload.file.name);
+      }
+      
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') {
@@ -94,7 +99,7 @@ export const useFileUpload = (chatId: string) => {
       setFileUpload(prev => ({ ...prev, uploading: false }));
       throw error;
     }
-  }, [chatId, fileUpload.file]);
+  }, [chatId, fileUpload.file, onUploadSuccess]);
 
   const clearFile = useCallback(() => {
     setFileUpload({ file: null, progress: 0, uploading: false });
