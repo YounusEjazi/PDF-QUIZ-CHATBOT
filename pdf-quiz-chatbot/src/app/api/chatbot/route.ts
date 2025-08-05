@@ -11,6 +11,8 @@ export const POST = async (req: Request) => {
       return NextResponse.json({ error: "Invalid user input." }, { status: 400 });
     }
 
+    console.log('Chatbot API called with:', { userMessage, chatId });
+
     // Retrieve context for the chat
     const chatContext = await prisma.chatContext.findFirst({
       where: { chatId },
@@ -21,21 +23,33 @@ export const POST = async (req: Request) => {
       ? `You are a helpful assistant. Use the provided context to answer questions clearly and concisely.\n\nContext:\n${chatContext.context}`
       : "You are a helpful assistant. Answer questions clearly and concisely.";
 
+    console.log('System prompt:', systemPrompt);
+
     const botResponse = await strict_output(
       systemPrompt,
       userMessage,
       { answer: "string" },
       "",
       false,
-      "deepseek-chat", // Changed from "gpt-3.5-turbo" to DeepSeek model
+      "deepseek-chat",
       0.7,
       3,
-      false
+      true // Enable verbose logging
     );
 
-    return NextResponse.json({ response: botResponse }, { status: 200 });
+    console.log('Bot response from strict_output:', botResponse);
+
+    // The strict_output function returns a string, so we wrap it in the expected format
+    return NextResponse.json({ 
+      response: botResponse,
+      answer: botResponse, // Also include as answer for compatibility
+      message: botResponse // Also include as message for compatibility
+    }, { status: 200 });
   } catch (error) {
-    console.error("API Error:", error.message);
-    return NextResponse.json({ error: "Server error occurred." }, { status: 500 });
+    console.error("Chatbot API Error:", error);
+    return NextResponse.json({ 
+      error: "Server error occurred.",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 };

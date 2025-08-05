@@ -5,9 +5,8 @@
 body {
   margin: 0;
   padding: 0;
-  height: 100vh;
+  height: 100%;
   width: 100vw;
-
 
   background-size: cover; /* Passt das Bild an den Bildschirm an */
   background-color:antiquewhite(9, 9, 52);
@@ -206,4 +205,9 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure chat routes take full viewport height */
+body[class*="h-full"] {
+  height: 100vh !important;
 }

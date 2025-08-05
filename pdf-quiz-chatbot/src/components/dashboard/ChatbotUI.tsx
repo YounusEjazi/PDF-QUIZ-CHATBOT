@@ -14,11 +14,12 @@ const ChatbotUI = () => {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "New Chat" }),
       });
   
       if (response.ok) {
         const data = await response.json();
-        router.push(`/chatbot/${data.id}`);
+        router.push(`/chatbot/${data.chatId}`);
       } else {
         console.error("Failed to create a new chat");
       }
