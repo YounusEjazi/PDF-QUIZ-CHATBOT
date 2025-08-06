@@ -46,8 +46,10 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
 
   console.log('ChatPage rendered with chatId:', chatId, 'currentChatId:', currentChatId);
 
-  const { chatState, setChatState, sendMessage, fetchMessages, retry } = useChat(currentChatId || "temp");
-  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(currentChatId || "temp");
+  // Always use the latest currentChatId for hooks
+  const chatIdForHooks = currentChatId || "temp";
+  const { chatState, sendMessage, fetchMessages, retry } = useChat(chatIdForHooks);
+  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(chatIdForHooks);
   const { chatsState, createChat, deleteChat, updateChatName } = useChats();
 
   const scrollToBottom = useCallback(() => {
@@ -169,7 +171,18 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   // Unified send function: sends prompt and PDF together if PDF is selected
   const handleSendMessage = useCallback(async () => {
     if ((!inputValue.trim() && !fileUpload.file) || chatState.loading) return;
-    
+
+    // Always add optimistic user message first (for both prompt and PDF+prompt)
+    const optimisticMsg = {
+      id: Date.now().toString() + '-user',
+      sender: "user" as const,
+      content: inputValue,
+      createdAt: new Date(),
+      optimistic: true,
+    };
+    setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
+    setIsProcessing(true);
+
     // If a PDF is selected, send both prompt and PDF together
     if (fileUpload.file) {
       try {
@@ -185,16 +198,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         formData.append("pdf", fileUpload.file);
         formData.append("prompt", inputValue);
 
-        setIsProcessing(true);
-        // Add optimistic user message locally (always)
-        const optimisticMsg = {
-          id: Date.now().toString() + '-user',
-          sender: "user" as const,
-          content: inputValue,
-          createdAt: new Date(),
-          optimistic: true,
-        };
-        setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
+
 
         // Upload PDF and prompt together
         const response = await axios.post(`/api/chat/${targetChatId}/pdf`, formData, {
@@ -219,18 +223,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
       return;
     }
 
-    // If no PDF, just send the prompt as before
-    if (!inputValue.trim()) return;
-    setIsProcessing(true);
-    // Add optimistic user message locally
-    const optimisticMsg = {
-      id: Date.now().toString() + '-user',
-      sender: "user" as const,
-      content: inputValue,
-      createdAt: new Date(),
-      optimistic: true,
-    };
-    setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
+
     if (!currentChatId || currentChatId === "temp") {
       try {
         const newChatId = await createNewChat();
@@ -329,9 +322,198 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
       isNewChat,
       messagesCount: chatState.messages.length
     });
+    if (isNewChat) {
+      return (
+        <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+          {/* Sidebar - Always show actual chat list */}
+          <div className={cn(
+            "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
+            "lg:translate-x-0", // Always visible on desktop
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hidden on mobile when closed, but always visible on desktop
+          )}>
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    AI Chat
+                  </h1>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCreateNewChat}
+                      className="text-purple-600 hover:text-purple-700"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSidebarOpen(false)}
+                      className="lg:hidden" // Only show on mobile
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chat List */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {chatsState.loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                  </div>
+                ) : chatsState.error ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-sm text-red-600 dark:text-red-400">{chatsState.error}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {chatsState.chats.map((chat) => (
+                      <ChatListItem
+                        key={chat.id}
+                        chat={chat}
+                        isActive={chat.id === currentChatId}
+                        onSelect={(chatId) => router.push(`/chatbot/${chatId}`)}
+                        onDelete={handleDeleteChat}
+                        onUpdateName={handleUpdateChatName}
+                        formatDate={formatDate}
+                      />
+                    ))}
+                    
+                    {chatsState.chats.length === 0 && (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No chats yet</p>
+                        <p className="text-xs">Start a conversation to see your chats here</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Welcome Screen */}
+          <div className="flex-1 flex flex-col">
+            {/* Header */}
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Welcome to AI Chat
+                  </h2>
+                </div>
+              </div>
+            </div>
+
+            {/* Welcome Content */}
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="max-w-2xl text-center space-y-8">
+                <div className="space-y-4">
+                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto">
+                    <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                    Start Your Conversation
+                  </h1>
+                  <p className="text-lg text-gray-600 dark:text-gray-400">
+                    Begin chatting with our AI assistant to explore topics, get explanations, or find answers to your questions.
+                  </p>
+                </div>
+
+                {/* Quick Start Prompts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                  <Button
+                    onClick={() => handlePromptSelect("Hello! Can you help me with a question?")}
+                    variant="outline"
+                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
+                  >
+                    <MessageSquare className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium">Start a conversation</span>
+                  </Button>
+                  
+                  <Button
+                    onClick={() => handlePromptSelect("I need help understanding a topic. Can you explain it to me?")}
+                    variant="outline"
+                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
+                  >
+                    <Bot className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium">Ask for help</span>
+                  </Button>
+                  
+                  <Button
+                    onClick={() => handlePromptSelect("Can you help me analyze a document or text?")}
+                    variant="outline"
+                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
+                  >
+                    <FileUp className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium">Analyze documents</span>
+                  </Button>
+                  
+                  <Button
+                    onClick={() => handlePromptSelect("I'd like to learn something new. What can you teach me?")}
+                    variant="outline"
+                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
+                  >
+                    <Sparkles className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium">Learn something new</span>
+                  </Button>
+                </div>
+
+                {/* Start Chat Button */}
+                <div className="mt-6">
+                  <Button
+                    onClick={handleStartChat}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
+                  >
+                    Start Chat
+                  </Button>
+                </div>
+
+                {/* Or start with custom message */}
+                <div className="mt-8">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Or type your own message to get started:
+                  </p>
+                  <div className="flex items-center space-x-3 max-w-md mx-auto">
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type your message..."
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!inputValue.trim()}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Sidebar - Always show actual chat list */}
+        {/* Sidebar - Always visible on desktop, hidden on mobile when closed */}
         <div className={cn(
           "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
           "lg:translate-x-0", // Always visible on desktop
@@ -639,7 +821,17 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
             </div>
           )}
 
-          {[...chatState.messages, ...optimisticMessages].map((message) => (
+          {[
+            ...chatState.messages,
+            ...optimisticMessages.filter(
+              (optimistic) =>
+                !chatState.messages.some(
+                  (msg) =>
+                    msg.sender === optimistic.sender &&
+                    msg.content === optimistic.content
+                )
+            ),
+          ].map((message) => (
             <div
               key={message.id}
               className="flex items-start justify-center space-x-3 max-w-4xl mx-auto"
@@ -675,8 +867,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
             </div>
           ))}
 
-          {/* Typing Indicator */}
-          {chatState.isTyping && (
+          {/* Typing Indicator (three dots) */}
+          {chatState.isTyping ? (
             <div className="flex items-start justify-center space-x-3 max-w-4xl mx-auto">
               <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -689,20 +881,21 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                 </div>
               </div>
             </div>
+          ) : isProcessing && (
+            // Bot is thinking indicator (show only if not typing)
+            <div className="flex items-start justify-center space-x-3 max-w-4xl mx-auto">
+              <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="flex-1 max-w-3xl">
+                <span className="italic text-gray-500 dark:text-gray-400">Bot is thinking...</span>
+              </div>
+            </div>
           )}
 
           <div ref={messagesEndRef} />
           {/* Bot is thinking indicator */}
-          {isProcessing && (
-            <div className="flex items-start justify-center space-x-3 max-w-4xl mx-auto mt-2">
-              <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-bounce" />
-              </div>
-              <div className="flex-1 max-w-3xl">
-                <div className="text-gray-700 dark:text-gray-300 text-sm">Bot is thinking...</div>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Input Area */}
