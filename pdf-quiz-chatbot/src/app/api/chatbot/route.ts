@@ -28,38 +28,38 @@ export const POST = async (req: Request) => {
     let systemPrompt = "You are a helpful assistant. Answer questions clearly and concisely.";
     let hasContext = false;
 
-    if (chat?.pdfUrl) {
-      console.log('Chat has PDF context, performing vector search...');
-      
-      // Use vector search to find relevant context
-      const relevantContext = await getRelevantContext(userMessage, chatId);
-      // Only use context if it is not empty or too short
-      if (relevantContext && relevantContext.trim().length > 40) {
-        hasContext = true;
-        systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely. If the user's question is not related to the document context, you can still provide general assistance.
+    // Always include last N chat messages for memory
+    // Only use last 5 messages for chat memory
+    const chatHistory = chat?.messages?.slice(0, 5).reverse().map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n') || '';
 
-Document Context:
-${relevantContext}
+    // Helper: is the user prompt about the PDF or document?
+    function promptMentionsPDF(prompt: string) {
+      const pdfKeywords = ["pdf", "document", "file", "page", "section", "paragraph", "text above", "analyze this", "in the doc", "in the file", "in the document"];
+      return pdfKeywords.some(kw => prompt.toLowerCase().includes(kw));
+    }
 
-Instructions:
-- Answer questions based on the document context when relevant
-- If the question is not covered in the context, say so and provide general assistance
-- Be accurate and cite page numbers when referencing specific information
-- Keep responses clear and well-structured`;
-        
-        console.log('Using RAG context for response');
-      } else {
-        // No meaningful context found, use general prompt
-        hasContext = false;
-        systemPrompt = "You are a helpful assistant. Answer questions clearly and concisely. If the user's question is not related to a document, do not reference any document.";
-        console.log('No relevant context found, using general assistance');
-      }
+    let relevantContext = "";
+    if (chat?.pdfUrl && promptMentionsPDF(userMessage)) {
+      const t0 = Date.now();
+      console.log('Prompt is about PDF, performing vector search...');
+      // Only get 1 chunk for speed
+      relevantContext = await getRelevantContext(userMessage, chatId, 1);
+      console.log('Vector search took', Date.now() - t0, 'ms');
+    }
+
+    if (relevantContext && relevantContext.trim().length > 40) {
+      hasContext = true;
+      systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- Be accurate and cite page numbers when referencing specific information\n- Keep responses clear and well-structured`;
+      console.log('Using RAG context for response');
     } else {
-      console.log('No PDF context available, using general assistance');
+      hasContext = false;
+      systemPrompt = `You are a helpful assistant. Answer questions clearly and concisely.\n\nHere is the recent chat history for context:\n${chatHistory}`;
+      console.log('No relevant PDF context or not a PDF question, using chat memory only.');
     }
 
     console.log('System prompt length:', systemPrompt.length);
 
+    const t1 = Date.now();
     const botResponse = await strict_output(
       systemPrompt,
       userMessage,
@@ -73,6 +73,7 @@ Instructions:
     );
 
     console.log('Bot response from strict_output:', botResponse);
+    console.log('strict_output call took', Date.now() - t1, 'ms');
 
     // The strict_output function returns a string, so we wrap it in the expected format
     return NextResponse.json({ 
