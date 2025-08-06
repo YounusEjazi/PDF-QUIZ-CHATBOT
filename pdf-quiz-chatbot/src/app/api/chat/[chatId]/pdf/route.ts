@@ -28,6 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
 
     const formData = await req.formData();
     const uploadedFile = formData.get("pdf") as File;
+    const prompt = formData.get("prompt") as string | null;
 
     if (!uploadedFile) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -86,14 +87,78 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
       },
     });
 
-    // Save the success message in the chat history
-    await prisma.message.create({
-      data: {
-        chatId,
-        content: PDF_SUCCESS_MESSAGE,
-        sender: "bot",
-      },
-    });
+
+    // If a prompt was provided, save it as a user message IMMEDIATELY
+    let botResponseText = null;
+    if (prompt && prompt.trim().length > 0) {
+      // Save user message immediately
+      await prisma.message.create({
+        data: {
+          chatId,
+          content: prompt,
+          sender: "user",
+        },
+      });
+    }
+
+    // ... PDF processing, embedding, context storage ...
+
+    if (prompt && prompt.trim().length > 0) {
+      // Generate bot response using the same logic as /api/chatbot
+      // (Reuse chatbot context logic if possible)
+      // Fetch chat and context
+      const chat = await prisma.chat.findUnique({
+        where: { id: chatId },
+        include: {
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 10,
+          },
+        },
+      });
+      let systemPrompt = "You are a helpful assistant. Answer questions clearly and concisely.";
+      let hasContext = false;
+      if (chat?.pdfUrl) {
+        // Use vector search to find relevant context
+        try {
+          const { getRelevantContext } = await import("@/lib/ai/vectorSearch");
+          const relevantContext = await getRelevantContext(prompt, chatId);
+          if (relevantContext && relevantContext.trim().length > 40) {
+            hasContext = true;
+            systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely. If the user's question is not related to the document context, you can still provide general assistance.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- Be accurate and cite page numbers when referencing specific information\n- Keep responses clear and well-structured`;
+          } else {
+            // No meaningful context found, use general prompt
+            hasContext = false;
+            systemPrompt = "You are a helpful assistant. Answer questions clearly and concisely. If the user's question is not related to a document, do not reference any document.";
+          }
+        } catch (err) {
+          // fallback to generic
+          hasContext = false;
+          systemPrompt = "You are a helpful assistant. Answer questions clearly and concisely. If the user's question is not related to a document, do not reference any document.";
+        }
+      }
+      // Generate bot answer
+      const { strict_output } = await import("@/lib/ai/gpt2");
+      botResponseText = await strict_output(
+        systemPrompt,
+        prompt,
+        { answer: "string" },
+        "",
+        false,
+        "deepseek-chat",
+        0.7,
+        3,
+        true
+      );
+      // Save bot message
+      await prisma.message.create({
+        data: {
+          chatId,
+          content: botResponseText,
+          sender: "bot",
+        },
+      });
+    }
 
     // Update the chat with PDF URL
     await prisma.chat.update({
@@ -104,8 +169,9 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
     });
 
     return NextResponse.json({
-      message: "PDF processed successfully and context stored.",
+      message: botResponseText || "PDF processed successfully and context stored.",
       chunksProcessed: chunks.length,
+      botResponse: botResponseText,
     });
   } catch (error) {
     console.error("Error processing PDF:", error);

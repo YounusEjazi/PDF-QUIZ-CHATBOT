@@ -33,18 +33,20 @@ type ChatPageProps = {
 };
 
 const ChatPage = ({ chatId }: ChatPageProps) => {
+  const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentChatId, setCurrentChatId] = useState<string | null>(chatId || null);
   const [creatingChat, setCreatingChat] = useState(false);
   const [isNewChat, setIsNewChat] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // for PDF+prompt
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   console.log('ChatPage rendered with chatId:', chatId, 'currentChatId:', currentChatId);
 
-  const { chatState, sendMessage, fetchMessages, retry } = useChat(currentChatId || "temp");
+  const { chatState, setChatState, sendMessage, fetchMessages, retry } = useChat(currentChatId || "temp");
   const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(currentChatId || "temp");
   const { chatsState, createChat, deleteChat, updateChatName } = useChats();
 
@@ -164,29 +166,92 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     }
   }, [sendMessage, currentChatId, createNewChat]);
 
+  // Unified send function: sends prompt and PDF together if PDF is selected
   const handleSendMessage = useCallback(async () => {
-    console.log('Sending message:', inputValue);
-    if (!inputValue.trim() || chatState.loading) return;
+    if ((!inputValue.trim() && !fileUpload.file) || chatState.loading) return;
     
-    // If no chat ID exists, create one first
+    // If a PDF is selected, send both prompt and PDF together
+    if (fileUpload.file) {
+      try {
+        // If no chat ID, create one first
+        let targetChatId = currentChatId;
+        if (!currentChatId || currentChatId === "temp") {
+          targetChatId = await createNewChat();
+          setCurrentChatId(targetChatId);
+        }
+
+        // Prepare FormData
+        const formData = new FormData();
+        formData.append("pdf", fileUpload.file);
+        formData.append("prompt", inputValue);
+
+        setIsProcessing(true);
+        // Add optimistic user message locally (always)
+        const optimisticMsg = {
+          id: Date.now().toString() + '-user',
+          sender: "user" as const,
+          content: inputValue,
+          createdAt: new Date(),
+          optimistic: true,
+        };
+        setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
+
+        // Upload PDF and prompt together
+        const response = await axios.post(`/api/chat/${targetChatId}/pdf`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (progressEvent) => {
+            const progress = progressEvent.total
+              ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+              : 0;
+            // Optionally set upload progress state here
+          },
+        });
+        // Only clear input and fetch messages after backend responds
+        await fetchMessages();
+        setOptimisticMessages([]); // Remove optimistic messages after backend fetch
+        clearFile();
+        setInputValue("");
+        setIsNewChat(false);
+        setIsProcessing(false);
+      } catch (error) {
+        console.error("Failed to send prompt and PDF:", error);
+      }
+      return;
+    }
+
+    // If no PDF, just send the prompt as before
+    if (!inputValue.trim()) return;
+    setIsProcessing(true);
+    // Add optimistic user message locally
+    const optimisticMsg = {
+      id: Date.now().toString() + '-user',
+      sender: "user" as const,
+      content: inputValue,
+      createdAt: new Date(),
+      optimistic: true,
+    };
+    setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
     if (!currentChatId || currentChatId === "temp") {
       try {
         const newChatId = await createNewChat();
-        // Wait a bit for the chat to be created, then send the message
-        setTimeout(() => {
-          sendMessage(inputValue);
+        setTimeout(async () => {
+          await sendMessage(inputValue);
+          setIsProcessing(false);
           setInputValue("");
-          setIsNewChat(false); // Exit welcome screen
+          setIsNewChat(false);
         }, 100);
       } catch (error) {
+        setIsProcessing(false);
         console.error('Failed to create chat:', error);
       }
     } else {
-      sendMessage(inputValue);
+      await sendMessage(inputValue);
+      setOptimisticMessages([]); // Remove optimistic messages after backend fetch
+      setIsProcessing(false);
       setInputValue("");
-      setIsNewChat(false); // Exit welcome screen
+      setIsNewChat(false);
     }
-  }, [inputValue, chatState.loading, sendMessage, currentChatId, createNewChat]);
+  }, [inputValue, chatState.loading, sendMessage, currentChatId, createNewChat, fileUpload.file, clearFile]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -334,64 +399,6 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                   )}
                 </div>
               )}
-            </div>
-
-            {/* File Upload */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="space-y-3">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  className="w-full"
-                  disabled={fileUpload.uploading || !currentChatId || currentChatId === "temp"}
-                >
-                  <FileUp className="w-4 h-4 mr-2" />
-                  Upload PDF
-                </Button>
-                
-                {fileUpload.file && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-blue-900 dark:text-blue-100 truncate">
-                        {fileUpload.file.name}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        {fileUpload.uploading ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                        ) : (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={clearFile}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={handleFileSubmit}
-                              className="h-6 px-2 text-xs"
-                            >
-                              Upload
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {fileUpload.uploading && (
-                      <div className="mt-2">
-                        <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1">
-                          <div 
-                            className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-                            style={{ width: `${fileUpload.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -581,64 +588,6 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
               </div>
             )}
           </div>
-
-          {/* File Upload */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="space-y-3">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="w-full"
-                disabled={fileUpload.uploading || !currentChatId || currentChatId === "temp"}
-              >
-                <FileUp className="w-4 h-4 mr-2" />
-                Upload PDF
-              </Button>
-              
-              {fileUpload.file && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-900 dark:text-blue-100 truncate">
-                      {fileUpload.file.name}
-                    </span>
-                    <div className="flex items-center space-x-2">
-                      {fileUpload.uploading ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={clearFile}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleFileSubmit}
-                            className="h-6 px-2 text-xs"
-                          >
-                            Upload
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {fileUpload.uploading && (
-                    <div className="mt-2">
-                      <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1">
-                        <div 
-                          className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-                          style={{ width: `${fileUpload.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -690,7 +639,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
             </div>
           )}
 
-          {chatState.messages.map((message) => (
+          {[...chatState.messages, ...optimisticMessages].map((message) => (
             <div
               key={message.id}
               className="flex items-start justify-center space-x-3 max-w-4xl mx-auto"
@@ -743,39 +692,80 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
           )}
 
           <div ref={messagesEndRef} />
+          {/* Bot is thinking indicator */}
+          {isProcessing && (
+            <div className="flex items-start justify-center space-x-3 max-w-4xl mx-auto mt-2">
+              <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-bounce" />
+              </div>
+              <div className="flex-1 max-w-3xl">
+                <div className="text-gray-700 dark:text-gray-300 text-sm">Bot is thinking...</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input Area */}
         <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center space-x-3">
-            <div className="flex-1">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:space-x-3">
+            {/* PDF Upload Button */}
+            <div className="flex items-center space-x-2 mb-2 md:mb-0">
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                className="flex-shrink-0"
+                disabled={fileUpload.uploading || !currentChatId || currentChatId === "temp"}
+              >
+                <FileUp className="w-4 h-4 mr-2" />
+                Upload PDF
+              </Button>
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              {/* Show selected file and upload controls */}
+              {fileUpload.file && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm truncate max-w-[120px]">{fileUpload.file.name}</span>
+                  {fileUpload.uploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  ) : (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={clearFile} className="h-6 w-6 p-0">
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                      <Button size="sm" onClick={handleFileSubmit} className="h-6 px-2 text-xs">
+                        Upload
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Chat Input */}
+            <div className="flex-1 flex items-center space-x-3">
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={currentChatId && currentChatId !== "temp" ? "Type your message..." : "Type your first message to start chatting..."}
-                disabled={chatState.loading || chatState.isTyping}
+                disabled={chatState.loading || chatState.isTyping || isProcessing}
                 className="w-full"
               />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim() || chatState.loading || chatState.isTyping || isProcessing}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
             </div>
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || chatState.loading || chatState.isTyping}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
           </div>
         </div>
-
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
       </div>
     </div>
   );

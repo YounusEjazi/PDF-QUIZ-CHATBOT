@@ -33,8 +33,8 @@ export const POST = async (req: Request) => {
       
       // Use vector search to find relevant context
       const relevantContext = await getRelevantContext(userMessage, chatId);
-      
-      if (relevantContext) {
+      // Only use context if it is not empty or too short
+      if (relevantContext && relevantContext.trim().length > 40) {
         hasContext = true;
         systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely. If the user's question is not related to the document context, you can still provide general assistance.
 
@@ -49,6 +49,9 @@ Instructions:
         
         console.log('Using RAG context for response');
       } else {
+        // No meaningful context found, use general prompt
+        hasContext = false;
+        systemPrompt = "You are a helpful assistant. Answer questions clearly and concisely. If the user's question is not related to a document, do not reference any document.";
         console.log('No relevant context found, using general assistance');
       }
     } else {
