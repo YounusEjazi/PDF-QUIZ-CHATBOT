@@ -15,22 +15,26 @@ export default async function Home() {
     {
       icon: Brain,
       title: "AI-Powered Learning",
-      description: "Transform your study materials into interactive quizzes using advanced AI"
+      description: "Transform your study materials into interactive quizzes using advanced AI",
+      gradient: "from-purple-600 to-pink-600"
     },
     {
       icon: FileText,
       title: "PDF Integration",
-      description: "Upload PDFs and instantly create customized learning materials"
+      description: "Upload PDFs and instantly create customized learning materials",
+      gradient: "from-blue-600 to-cyan-600"
     },
     {
       icon: MessageSquare,
       title: "Smart Chatbot",
-      description: "Get instant help and explanations from our intelligent assistant"
+      description: "Get instant help and explanations from our intelligent assistant",
+      gradient: "from-emerald-600 to-teal-600"
     },
     {
       icon: Target,
       title: "Track Progress",
-      description: "Monitor your learning journey with detailed analytics and insights"
+      description: "Monitor your learning journey with detailed analytics and insights",
+      gradient: "from-orange-600 to-red-600"
     }
   ];
 
@@ -56,18 +60,29 @@ export default async function Home() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="relative group"
+              className="group relative"
             >
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 dark:from-pink-500 dark:to-purple-500 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
-              <div className="relative bg-white dark:bg-gray-900 px-7 py-6 rounded-lg leading-none flex items-center space-x-6">
-                <feature.icon className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{feature.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
+              {/* Subtle gradient border */}
+              <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.gradient} rounded-lg blur opacity-15 group-hover:opacity-25 transition duration-300`} />
+              
+              {/* Card content */}
+              <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-white/40 dark:border-slate-700/40 px-5 py-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.005] h-32 flex flex-col">
+                {/* Icon with subtle gradient */}
+                <div className={`inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br ${feature.gradient} rounded-lg mb-3 shadow-sm`}>
+                  <feature.icon className="w-5 h-5 text-white" />
+                </div>
+                
+                <div className="space-y-1 flex-1">
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                    {feature.title}
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                    {feature.description}
+                  </p>
                 </div>
               </div>
             </div>
