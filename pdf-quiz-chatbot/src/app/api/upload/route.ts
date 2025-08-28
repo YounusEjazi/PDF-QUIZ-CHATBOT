@@ -162,9 +162,19 @@ export async function POST(req: NextRequest) {
       );
     } else {
       questions = await strict_output(
-        `You are a helpful AI that generates MCQ questions in ${language}. The answer and options should not exceed 15 words each. Include the following context from a PDF: "${context}". Store all questions, answers, and options in a JSON array.`,
+        `You are a helpful AI that generates MCQ questions in ${language}. The answer and options should not exceed 15 words each. 
+        
+CRITICAL JSON FORMATTING RULES:
+1. ALL keys must be in double quotes: "question", "answer", "option1", etc.
+2. ALL values must be in double quotes: "What is...", "Correct answer", etc.
+3. If any text contains quotes, escape them with backslashes: "golden \\"era\\""
+4. Do NOT use // or any control characters in values
+5. Use proper JSON syntax with commas between items
+6. Example format: {"question": "What is...?", "answer": "Correct answer", "option1": "Wrong 1", "option2": "Wrong 2", "option3": "Wrong 3"}
+
+Include the following context from a PDF: "${context}". Store all questions, answers, and options in a JSON array.`,
         new Array(amount).fill(
-          `Generate a hard MCQ question about ${topic} in ${language}, considering the context above.`
+          `Generate a hard MCQ question about ${topic} in ${language}, considering the context above. Follow the JSON formatting rules exactly.`
         ),
         {
           question: "question",

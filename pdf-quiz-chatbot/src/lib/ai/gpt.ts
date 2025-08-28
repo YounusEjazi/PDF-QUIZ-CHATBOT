@@ -139,6 +139,59 @@ export async function strict_output(
       error_msg = `\n\nResult: ${res}\n\nError message: ${e}`;
       console.log("An exception occurred:", e);
       console.log("Current invalid json format:", res);
+      
+      // Try to fix common JSON issues and retry
+      try {
+        // Remove any trailing commas
+        res = res.replace(/,(\s*[}\]])/g, '$1');
+        
+        // Fix missing quotes around keys (more aggressive)
+        res = res.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+        
+        // Fix missing quotes around values (more aggressive)
+        res = res.replace(/:\s*([^"{\[\d][^,}]*[^"\s,}])\s*([,}])/g, ': "$1"$2');
+        
+        // Fix specific pattern where quotes are missing around entire values
+        res = res.replace(/:\s*([^"{\[\d][^,}]*?)\s*([,}])/g, (match, value, end) => {
+          // Don't add quotes if the value already has them or is a number
+          if (value.startsWith('"') || value.endsWith('"') || /^\d+$/.test(value)) {
+            return match;
+          }
+          return `: "${value}"${end}`;
+        });
+        
+        // Fix unescaped quotes in string values
+        res = res.replace(/"([^"]*)"([^"]*)"([^"]*)"/g, (match, p1, p2, p3) => {
+          return `"${p1}${p2.replace(/"/g, '\\"')}${p3}"`;
+        });
+        
+        // Fix control characters and special characters
+        res = res.replace(/\/\//g, '\\/\\/'); // Escape double slashes
+        res = res.replace(/\n/g, '\\n'); // Escape newlines
+        res = res.replace(/\r/g, '\\r'); // Escape carriage returns
+        res = res.replace(/\t/g, '\\t'); // Escape tabs
+        
+        // Fix any remaining unescaped quotes
+        res = res.replace(/([^\\])"/g, '$1\\"');
+        
+        console.log("Attempted to fix JSON:", res);
+        
+        // Try parsing again
+        let output: any = JSON.parse(res);
+        
+        if (list_input) {
+          if (!Array.isArray(output)) {
+            throw new Error("Output format not in a list of json");
+          }
+        } else {
+          output = [output];
+        }
+        
+        return list_input ? output : output[0];
+      } catch (retryError) {
+        console.log("Retry failed:", retryError);
+        console.log("Attempted to fix JSON:", res);
+      }
     }
   }
 

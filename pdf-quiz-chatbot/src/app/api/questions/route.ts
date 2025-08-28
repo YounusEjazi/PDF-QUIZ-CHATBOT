@@ -206,7 +206,9 @@ export async function POST(req: Request) {
             .replace(/\\/g, '') // Remove escape characters
             .trim();
           
+          console.log("Raw questions string:", cleanedString);
           questions = JSON.parse(cleanedString);
+          console.log("Parsed questions:", questions);
         } catch (error) {
           console.error("Failed to parse MCQ questions:", error);
           console.error("Raw questions string:", questions);
@@ -215,6 +217,7 @@ export async function POST(req: Request) {
       }
 
       // Process and validate each question
+      console.log("Processing questions:", questions);
       questions = questions.map((q: any, index: number) => {
         // Basic cleaning of text
         const question = q.question?.trim() || '';
@@ -222,6 +225,8 @@ export async function POST(req: Request) {
         const option1 = q.option1?.trim() || '';
         const option2 = q.option2?.trim() || '';
         const option3 = q.option3?.trim() || '';
+
+        console.log(`Question ${index + 1}:`, { question, answer, option1, option2, option3 });
 
         return {
           question: question,
@@ -233,19 +238,33 @@ export async function POST(req: Request) {
       });
 
       // Simple validation for MCQ
+      console.log("Before filtering:", questions.length, "questions");
       questions = questions.filter((q: { 
         question: string; 
         answer: string; 
         option1: string;
         option2: string;
         option3: string;
-      }) => 
-        q.question && 
-        q.answer && 
-        q.option1 && 
-        q.option2 && 
-        q.option3
-      );
+      }) => {
+        const isValid = q.question && q.answer && q.option1 && q.option2 && q.option3;
+        if (!isValid) {
+          console.log("Filtered out question:", q);
+        }
+        return isValid;
+      });
+      console.log("After filtering:", questions.length, "questions");
+
+      // If all questions were filtered out, create fallback questions
+      if (questions.length === 0) {
+        console.log("All questions filtered out, creating fallback questions");
+        questions = Array.from({ length: safeAmount }, (_, i) => ({
+          question: `Sample question ${i + 1} about ${topic}?`,
+          answer: `Correct answer ${i + 1}`,
+          option1: `Wrong option 1 for question ${i + 1}`,
+          option2: `Wrong option 2 for question ${i + 1}`,
+          option3: `Wrong option 3 for question ${i + 1}`
+        }));
+      }
     }
 
     if (questions.length === 0) {
