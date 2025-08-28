@@ -1,4 +1,8 @@
 import React from "react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { github } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils/utils";
 
 type MarkdownRendererProps = {
@@ -24,297 +28,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     } catch {
       return false;
     }
-  };
-
-  // Function to detect if content is a table
-  const isTable = (text: string): boolean => {
-    const lines = text.trim().split('\n');
-    return lines.some(line => line.includes('|')) && 
-           lines.length > 1 && 
-           lines.some(line => line.includes('---'));
-  };
-
-  // Function to parse and render table
-  const renderTable = (text: string) => {
-    const lines = text.trim().split('\n').filter(line => line.trim());
-    const tableLines = lines.filter(line => line.includes('|'));
-    
-    if (tableLines.length < 2) return text;
-
-    const headers = tableLines[0].split('|').map(cell => cell.trim()).filter(cell => cell);
-    const dataRows = tableLines.slice(2).map(line => 
-      line.split('|').map(cell => cell.trim()).filter(cell => cell)
-    );
-
-    return (
-      <div className="overflow-x-auto my-4">
-        <table className="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-          <thead>
-            <tr className="bg-gray-50 dark:bg-gray-800">
-              {headers.map((header, index) => (
-                <th key={index} className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 break-words">
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {dataRows.map((row, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 break-words">
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
-  // Function to render JSON with syntax highlighting
-  const renderJSON = (text: string) => {
-    try {
-      const parsed = JSON.parse(text);
-      const formatted = JSON.stringify(parsed, null, 2);
-      
-      return (
-        <pre className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto text-sm my-2">
-          <code className="text-gray-800 dark:text-gray-200 font-mono">
-            {formatted.split('\n').map((line, index) => (
-              <div key={index} className="whitespace-pre">{line}</div>
-            ))}
-          </code>
-        </pre>
-      );
-    } catch {
-      return <span className="text-sm break-words">{text}</span>;
-    }
-  };
-
-  // Function to render code blocks
-  const renderCodeBlock = (text: string) => {
-    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = codeBlockRegex.exec(text)) !== null) {
-      // Add text before code block
-      if (match.index > lastIndex) {
-        parts.push({
-          type: 'text',
-          content: text.slice(lastIndex, match.index)
-        });
-      }
-
-      // Check if this is a JSON code block
-      const language = match[1] || 'text';
-      const codeContent = match[2];
-      
-      // Always render code blocks as formatted code, don't extract JSON content
-      parts.push({
-        type: 'code',
-        language,
-        content: codeContent
-      });
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text
-    if (lastIndex < text.length) {
-      parts.push({
-        type: 'text',
-        content: text.slice(lastIndex)
-      });
-    }
-
-    return parts.map((part, index) => {
-      if (part.type === 'code') {
-        return (
-          <pre key={index} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto my-2">
-            <code className="text-sm text-gray-800 dark:text-gray-200 font-mono">
-              {part.content}
-            </code>
-          </pre>
-        );
-      } else {
-        return (
-          <span key={index} className="text-sm whitespace-pre-wrap break-words">
-            {part.content}
-          </span>
-        );
-      }
-    });
-  };
-
-  // Function to render inline code
-  const renderInlineCode = (text: string) => {
-    const inlineCodeRegex = /`([^`]+)`/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = inlineCodeRegex.exec(text)) !== null) {
-      // Add text before inline code
-      if (match.index > lastIndex) {
-        parts.push({
-          type: 'text',
-          content: text.slice(lastIndex, match.index)
-        });
-      }
-
-      // Add inline code
-      parts.push({
-        type: 'inlineCode',
-        content: match[1]
-      });
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text
-    if (lastIndex < text.length) {
-      parts.push({
-        type: 'text',
-        content: text.slice(lastIndex)
-      });
-    }
-
-    return parts.map((part, index) => {
-      if (part.type === 'inlineCode') {
-        return (
-          <code key={index} className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
-            {part.content}
-          </code>
-        );
-      } else {
-        return (
-          <span key={index} className="text-sm break-words">
-            {part.content}
-          </span>
-        );
-      }
-    });
-  };
-
-  // Function to render lists
-  const renderList = (text: string) => {
-    const lines = text.split('\n');
-    const listItems = lines.filter(line => line.trim().match(/^[-*+]\s/));
-    
-    if (listItems.length > 0) {
-      return (
-        <ul className="list-disc list-inside space-y-2 my-4 pl-4">
-          {listItems.map((item, index) => (
-            <li key={index} className="text-sm break-words text-gray-900 dark:text-gray-100">
-              {item.replace(/^[-*+]\s/, '')}
-            </li>
-          ))}
-        </ul>
-      );
-    }
-    
-    return text;
-  };
-
-  // Function to render numbered lists
-  const renderNumberedList = (text: string) => {
-    const lines = text.split('\n');
-    const listItems = lines.filter(line => line.trim().match(/^\d+\.\s/));
-    
-    if (listItems.length > 0) {
-      return (
-        <ol className="list-decimal list-inside space-y-2 my-4 pl-4">
-          {listItems.map((item, index) => (
-            <li key={index} className="text-sm break-words text-gray-900 dark:text-gray-100">
-              {item.replace(/^\d+\.\s/, '')}
-            </li>
-          ))}
-        </ol>
-      );
-    }
-    
-    return text;
-  };
-
-  // Function to render headings
-  const renderHeadings = (text: string) => {
-    const headingRegex = /^(#{1,6})\s+(.+)$/gm;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = headingRegex.exec(text)) !== null) {
-      // Add text before heading
-      if (match.index > lastIndex) {
-        parts.push({
-          type: 'text',
-          content: text.slice(lastIndex, match.index)
-        });
-      }
-
-      // Add heading
-      const level = match[1].length;
-      const headingText = match[2];
-      const Tag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements;
-      
-      parts.push({
-        type: 'heading',
-        level,
-        content: headingText,
-        Tag
-      });
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text
-    if (lastIndex < text.length) {
-      parts.push({
-        type: 'text',
-        content: text.slice(lastIndex)
-      });
-    }
-
-    return parts.map((part, index) => {
-      if (part.type === 'heading') {
-        const headingClasses = {
-          1: 'text-2xl font-bold',
-          2: 'text-xl font-bold',
-          3: 'text-lg font-semibold',
-          4: 'text-base font-semibold',
-          5: 'text-sm font-semibold',
-          6: 'text-sm font-medium'
-        };
-        
-        const Tag = part.Tag as keyof JSX.IntrinsicElements;
-        return (
-          <Tag key={index} className={cn(
-            headingClasses[part.level as keyof typeof headingClasses],
-            'text-gray-900 dark:text-gray-100 mt-4 mb-2 break-words'
-          )}>
-            {part.content}
-          </Tag>
-        );
-      } else {
-        return (
-          <span key={index} className="text-sm whitespace-pre-wrap break-words">
-            {part.content}
-          </span>
-        );
-      }
-    });
-  };
-
-  // Function to detect if content contains both markdown and JSON
-  const hasMixedContent = (text: string): boolean => {
-    const hasMarkdown = text.includes('#') || text.includes('```') || text.includes('- ') || text.includes('* ') || text.includes('+ ') || (text.match(/\d+\.\s/) !== null);
-    const hasJSON = (text.includes('{') && text.includes('}') && text.includes('"')) || text.includes('```json');
-    return hasMarkdown && hasJSON;
   };
 
   // Function to detect if this is a JSON response that should be shown as JSON
@@ -367,24 +80,119 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     return { jsonPart: null, markdownPart: text };
   };
 
+  // Function to render JSON with syntax highlighting
+  const renderJSON = (text: string) => {
+    try {
+      const parsed = JSON.parse(text);
+      const formatted = JSON.stringify(parsed, null, 2);
+      
+      return (
+        <div className="my-4">
+          <SyntaxHighlighter
+            language="json"
+            style={github}
+            showLineNumbers={false}
+          >
+            {formatted}
+          </SyntaxHighlighter>
+        </div>
+      );
+    } catch {
+      return <span className="text-sm break-words">{text}</span>;
+    }
+  };
+
+  // Function to clean up malformed tables
+  const cleanTableMarkdown = (text: string): string => {
+    const lines = text.split('\n');
+    const cleanedLines = lines.map(line => {
+      // Remove extra leading pipes
+      if (line.trim().startsWith('|') && line.trim().length > 1) {
+        return line.trim();
+      }
+      return line;
+    });
+    return cleanedLines.join('\n');
+  };
+
   // Main render function
   const renderContent = () => {
+    // Clean up the content first
+    const cleanedContent = cleanTableMarkdown(content);
+
     // Check if this should be shown as JSON
-    if (shouldShowAsJSON(content)) {
-      // If it's wrapped in code blocks, render as code block
-      if (content.includes('```json')) {
-        return renderMarkdownContent(content);
+    if (shouldShowAsJSON(cleanedContent)) {
+      // If it's wrapped in code blocks, render as markdown
+      if (cleanedContent.includes('```json')) {
+        return (
+          <ReactMarkdown
+            className="markdown-body"
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '');
+                return match ? (
+                  <SyntaxHighlighter
+                    style={github}
+                    language={match[1]}
+                    PreTag="div"
+                    showLineNumbers={false}
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code
+                    className={cn(
+                      "bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700",
+                      className
+                    )}
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                );
+              },
+              table({ children, ...props }) {
+                return (
+                  <div className="overflow-x-auto my-4">
+                    <table className="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm" {...props}>
+                      {children}
+                    </table>
+                  </div>
+                );
+              },
+              th({ children, ...props }) {
+                return (
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" {...props}>
+                    {children}
+                  </th>
+                );
+              },
+              td({ children, ...props }) {
+                return (
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700" {...props}>
+                    {children}
+                  </td>
+                );
+              },
+            }}
+          >
+            {cleanedContent}
+          </ReactMarkdown>
+        );
       }
       
       // If it's pure JSON, render as JSON
-      if (isJSON(content)) {
-        return renderJSON(content);
+      if (isJSON(cleanedContent)) {
+        return renderJSON(cleanedContent);
       }
     }
 
     // Check if it contains mixed content (markdown + JSON)
-    if (hasMixedContent(content)) {
-      const { jsonPart, markdownPart } = extractJSONFromMixedContent(content);
+    if (cleanedContent.includes('{') && cleanedContent.includes('}') && cleanedContent.includes('"') && 
+        (cleanedContent.includes('#') || cleanedContent.includes('```') || cleanedContent.includes('- ') || cleanedContent.includes('* ') || cleanedContent.includes('+ ') || cleanedContent.match(/\d+\.\s/))) {
+      const { jsonPart, markdownPart } = extractJSONFromMixedContent(cleanedContent);
       
       // If we have a valid JSON part, extract the answer and render markdown
       if (jsonPart && isJSON(jsonPart)) {
@@ -392,70 +200,448 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           const parsed = JSON.parse(jsonPart);
           if (parsed.answer) {
             // Render the answer as markdown
-            return renderMarkdownContent(parsed.answer);
+            return (
+              <ReactMarkdown
+                className="markdown-body"
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return match ? (
+                      <SyntaxHighlighter
+                        style={github}
+                        language={match[1]}
+                        PreTag="div"
+                        showLineNumbers={false}
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code
+                        className={cn(
+                          "bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700",
+                          className
+                        )}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                  table({ children, ...props }) {
+                    return (
+                      <div className="overflow-x-auto my-4">
+                        <table className="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm" {...props}>
+                          {children}
+                        </table>
+                      </div>
+                    );
+                  },
+                  th({ children, ...props }) {
+                    return (
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" {...props}>
+                        {children}
+                      </th>
+                    );
+                  },
+                  td({ children, ...props }) {
+                    return (
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700" {...props}>
+                        {children}
+                      </td>
+                    );
+                  },
+                }}
+              >
+                {parsed.answer}
+              </ReactMarkdown>
+            );
           }
         } catch {
           // Fall back to rendering the original content as markdown
-          return renderMarkdownContent(content);
         }
       }
       
       // If no valid JSON found, render as markdown
-      return renderMarkdownContent(markdownPart || content);
+      return (
+        <ReactMarkdown
+          className="markdown-body"
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code({ className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || '');
+              return match ? (
+                <SyntaxHighlighter
+                  style={github}
+                  language={match[1]}
+                  PreTag="div"
+                  showLineNumbers={false}
+                  {...props}
+                >
+                  {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+              ) : (
+                <code
+                  className={cn(
+                    "bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700",
+                    className
+                  )}
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            },
+            table({ children, ...props }) {
+              return (
+                <div className="overflow-x-auto my-4">
+                  <table className="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm" {...props}>
+                    {children}
+                  </table>
+                </div>
+              );
+            },
+            th({ children, ...props }) {
+              return (
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" {...props}>
+                  {children}
+                </th>
+              );
+            },
+            td({ children, ...props }) {
+              return (
+                <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700" {...props}>
+                  {children}
+                </td>
+              );
+            },
+          }}
+        >
+          {markdownPart || cleanedContent}
+        </ReactMarkdown>
+      );
     }
 
     // Check if it's pure JSON (this should catch direct JSON responses)
-    if (isJSON(content)) {
-      return renderJSON(content);
+    if (isJSON(cleanedContent)) {
+      return renderJSON(cleanedContent);
     }
 
     // Otherwise, render as markdown content
-    return renderMarkdownContent(content);
-  };
-
-  // Function to render markdown content
-  const renderMarkdownContent = (text: string) => {
-    // Check if it's a table
-    if (isTable(text)) {
-      return renderTable(text);
-    }
-
-    // Check if it contains code blocks
-    if (text.includes('```')) {
-      return renderCodeBlock(text);
-    }
-
-    // Check if it contains headings
-    if (text.includes('#')) {
-      return renderHeadings(text);
-    }
-
-    // Check if it contains lists
-    if (text.includes('- ') || text.includes('* ') || text.includes('+ ')) {
-      return renderList(text);
-    }
-
-    // Check if it contains numbered lists
-    if (text.match(/\d+\.\s/)) {
-      return renderNumberedList(text);
-    }
-
-    // Check if it contains inline code
-    if (text.includes('`')) {
-      return renderInlineCode(text);
-    }
-
-    // Default: render as plain text
     return (
-      <span className="text-sm whitespace-pre-wrap break-words">
-        {text}
-      </span>
+      <ReactMarkdown
+        className="markdown-body"
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '');
+            return match ? (
+              <SyntaxHighlighter
+                style={github}
+                language={match[1]}
+                PreTag="div"
+                showLineNumbers={false}
+                {...props}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            ) : (
+              <code
+                className={cn(
+                  "bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700",
+                  className
+                )}
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          },
+          table({ children, ...props }) {
+            return (
+              <div className="overflow-x-auto my-4">
+                <table className="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm" {...props}>
+                  {children}
+                </table>
+              </div>
+            );
+          },
+          th({ children, ...props }) {
+            return (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" {...props}>
+                {children}
+              </th>
+            );
+          },
+          td({ children, ...props }) {
+            return (
+              <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700" {...props}>
+                {children}
+              </td>
+            );
+          },
+        }}
+      >
+        {cleanedContent}
+      </ReactMarkdown>
     );
   };
 
   return (
-    <div className={cn("prose prose-sm max-w-none break-words", className)}>
+    <div className={cn("markdown-container", className)}>
       {renderContent()}
+      <style jsx>{`
+        .markdown-container {
+          font-size: 14px !important;
+          line-height: 1.7;
+          color: #23272f;
+          word-break: break-word;
+        }
+
+        .markdown-body {
+          font-size: 14px !important;
+          line-height: 1.7;
+          color: #23272f;
+          word-break: break-word;
+        }
+
+        /* Headings */
+        .markdown-body h1,
+        .markdown-body.markdown-body h1 {
+          font-size: 1.09em;
+          font-weight: 600;
+          margin-top: 1.1em;
+          margin-bottom: 0.4em;
+          color: #1a1a1a;
+        }
+
+        .markdown-body h2,
+        .markdown-body.markdown-body h2 {
+          font-size: 1.07em;
+          font-weight: 600;
+          margin-top: 1.1em;
+          margin-bottom: 0.4em;
+          color: #1a1a1a;
+        }
+
+        .markdown-body h3,
+        .markdown-body.markdown-body h3 {
+          font-size: 1.05em;
+          font-weight: 600;
+          margin-top: 1.1em;
+          margin-bottom: 0.4em;
+          color: #1a1a1a;
+        }
+
+        .markdown-body h4,
+        .markdown-body.markdown-body h4 {
+          font-size: 1.03em;
+          font-weight: 600;
+          margin-top: 1.1em;
+          margin-bottom: 0.4em;
+          color: #1a1a1a;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3,
+        .markdown-body h4 {
+          font-weight: 600;
+          margin-top: 1.1em;
+          margin-bottom: 0.4em;
+        }
+
+        /* Paragraphs */
+        .markdown-body p {
+          margin: 1em 0;
+          line-height: 1.6;
+        }
+
+        /* Links */
+        .markdown-body a {
+          color: #0a7cff;
+          text-decoration: underline;
+          word-break: break-all;
+        }
+
+        .markdown-body a:hover {
+          color: #0056b3;
+        }
+
+        /* Inline code */
+        .markdown-body code {
+          background: #f6f8fa;
+          color: #d6336c;
+          border-radius: 6px;
+          padding: 0.2em 0.4em;
+          font-size: 0.97em;
+          font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+          border: 1px solid #e1e4e8;
+        }
+
+        /* Code blocks */
+        .markdown-body pre {
+          background: #f6f8fa;
+          border-radius: 8px;
+          padding: 1em;
+          overflow-x: auto;
+          margin: 1.2em 0;
+          font-size: 0.98em;
+          font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+          border: 1px solid #e1e4e8;
+        }
+
+        .markdown-body pre code {
+          background: none;
+          color: inherit;
+          padding: 0;
+          font-size: inherit;
+          border: none;
+        }
+
+        /* Blockquotes */
+        .markdown-body blockquote {
+          border-left: 4px solid #b3b3b3;
+          background: #f9f9fa;
+          color: #555;
+          padding: 0.7em 1em;
+          margin: 1.2em 0;
+          border-radius: 6px;
+          font-style: italic;
+        }
+
+        /* Lists */
+        .markdown-body ul,
+        .markdown-body ol {
+          margin: 1em 0 1em 1.5em;
+          padding: 0;
+        }
+
+        .markdown-body li {
+          margin: 0.3em 0;
+          line-height: 1.6;
+        }
+
+        /* Tables */
+        .markdown-body table {
+          border-collapse: collapse;
+          margin: 0;
+          background: #fff;
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+          border: 1px solid #e2e2e2;
+          padding: 0.5em 0.8em;
+          text-align: left;
+        }
+
+        .markdown-body th {
+          background: #f6f8fa;
+          font-weight: 600;
+        }
+
+        /* Table wrapper for horizontal scrolling */
+        .markdown-table-wrapper {
+          overflow-x: auto !important;
+          overflow-y: auto !important;
+          max-height: 400px;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+
+        .markdown-table-wrapper table {
+          min-width: 1200px !important;
+          width: max-content !important;
+          border-collapse: collapse;
+          background: #fff;
+        }
+
+        .markdown-table-wrapper th,
+        .markdown-table-wrapper td {
+          white-space: nowrap;
+        }
+
+        /* Scrollbar styling */
+        .markdown-table-wrapper::-webkit-scrollbar {
+          height: 6px;
+          width: 6px;
+          background: transparent;
+          border-radius: 6px;
+        }
+
+        .markdown-table-wrapper::-webkit-scrollbar-thumb {
+          background: #b3b3b3;
+          border-radius: 6px;
+          transition: background 0.2s;
+        }
+
+        .markdown-table-wrapper::-webkit-scrollbar-thumb:hover {
+          background: #999999;
+        }
+
+        .markdown-table-wrapper::-webkit-scrollbar-corner {
+          background: transparent;
+        }
+
+        .markdown-table-wrapper {
+          scrollbar-width: thin;
+          scrollbar-color: #b3b3b3 transparent;
+        }
+
+        /* Dark mode support */
+        .dark .markdown-body {
+          color: #e5e7eb;
+        }
+
+        .dark .markdown-body h1,
+        .dark .markdown-body h2,
+        .dark .markdown-body h3,
+        .dark .markdown-body h4 {
+          color: #f9fafb;
+        }
+
+        .dark .markdown-body code {
+          background: #374151;
+          color: #f3f4f6;
+          border-color: #4b5563;
+        }
+
+        .dark .markdown-body pre {
+          background: #374151;
+          border-color: #4b5563;
+        }
+
+        .dark .markdown-body blockquote {
+          background: #374151;
+          color: #d1d5db;
+          border-left-color: #6b7280;
+        }
+
+        .dark .markdown-body table {
+          background: #1f2937;
+        }
+
+        .dark .markdown-body th,
+        .dark .markdown-body td {
+          border-color: #4b5563;
+          color: #f9fafb;
+        }
+
+        .dark .markdown-body th {
+          background: #374151;
+        }
+
+        /* Chat content specific styles */
+        .chat-content,
+        .bot {
+          min-width: 0 !important;
+          overflow-x: visible !important;
+        }
+      `}</style>
     </div>
   );
 }; 

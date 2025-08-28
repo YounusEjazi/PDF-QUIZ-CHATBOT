@@ -40,6 +40,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   const [creatingChat, setCreatingChat] = useState(false);
   const [isNewChat, setIsNewChat] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // for PDF+prompt
+  const [autoPromptOnUpload, setAutoPromptOnUpload] = useState(true); // New state for auto-prompt feature
+  const [defaultPrompt, setDefaultPrompt] = useState("Please analyze this PDF and provide a summary of its key points.");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -49,7 +51,15 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   // Always use the latest currentChatId for hooks
   const chatIdForHooks = currentChatId || "temp";
   const { chatState, sendMessage, fetchMessages, retry } = useChat(chatIdForHooks);
-  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(chatIdForHooks);
+  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(chatIdForHooks, (fileName: string) => {
+    // Callback when file upload is successful
+    if (autoPromptOnUpload) {
+      // Automatically send a prompt after successful upload
+      const defaultPrompt = "Please analyze this PDF and provide a summary of its key points.";
+      setInputValue(defaultPrompt);
+      // The prompt will be sent automatically in the next render cycle
+    }
+  });
   const { chatsState, createChat, deleteChat, updateChatName } = useChats();
 
   const scrollToBottom = useCallback(() => {
@@ -270,6 +280,73 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
       // Error is already handled in the hook
     }
   }, [handleSubmitFile]);
+
+  // Custom file upload handler with auto-prompt support
+  const handleCustomFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // First, set the file in the upload state
+    handleFileUpload(event);
+
+    // If auto-prompt is enabled, automatically upload with a default prompt
+    if (autoPromptOnUpload) {
+      handleAutoUploadWithPrompt(file, defaultPrompt);
+    }
+  }, [handleFileUpload, autoPromptOnUpload]);
+
+  // New function to handle automatic PDF upload with prompt
+  const handleAutoUploadWithPrompt = useCallback(async (file: File, prompt: string) => {
+    if (!file) return;
+
+    setIsProcessing(true);
+
+    // Add optimistic user message
+    const optimisticMsg = {
+      id: Date.now().toString() + '-user',
+      sender: "user" as const,
+      content: `📄 Uploaded: ${file.name}\n\n${prompt}`,
+      createdAt: new Date(),
+      optimistic: true,
+    };
+    setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
+
+    try {
+      // If no chat ID, create one first
+      let targetChatId = currentChatId;
+      if (!currentChatId || currentChatId === "temp") {
+        targetChatId = await createNewChat();
+        setCurrentChatId(targetChatId);
+      }
+
+      // Prepare FormData
+      const formData = new FormData();
+      formData.append("pdf", file);
+      formData.append("prompt", prompt);
+
+      // Upload PDF and prompt together
+      const response = await axios.post(`/api/chat/${targetChatId}/pdf`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (progressEvent) => {
+          const progress = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          // Optionally set upload progress state here
+        },
+      });
+
+      // Clear file and fetch messages
+      await fetchMessages();
+      setOptimisticMessages([]);
+      clearFile();
+      setIsNewChat(false);
+      setIsProcessing(false);
+    } catch (error) {
+      console.error("Failed to upload PDF with prompt:", error);
+      setIsProcessing(false);
+      setOptimisticMessages([]);
+    }
+  }, [currentChatId, createNewChat, clearFile, fetchMessages]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -700,7 +777,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen chat-container">
       {/* Sidebar - Always visible on desktop, hidden on mobile when closed */}
       <div className={cn(
         "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
@@ -811,7 +888,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 chat-messages">
           {chatState.loading && chatState.messages.length === 0 && (
             <div className="flex items-center justify-center h-full">
               <div className="flex items-center space-x-2">
@@ -834,128 +911,207 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
           ].map((message) => (
             <div
               key={message.id}
-              className="flex items-start justify-center space-x-3 max-w-4xl mx-auto"
+              className={cn(
+                "flex items-start space-x-3 max-w-4xl mx-auto chat-message-enter",
+                message.sender === "user" ? "flex-row-reverse space-x-reverse" : ""
+              )}
             >
+              {/* Avatar */}
               {message.sender === "bot" && (
-                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <div className="chat-avatar chat-avatar-bot">
+                  <Bot className="w-4 h-4 text-white" />
                 </div>
               )}
               
+              {message.sender === "user" && (
+                <div className="chat-avatar chat-avatar-user">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
+              
+              {/* Message Content */}
               <div className={cn(
-                "flex-1 max-w-3xl",
+                "flex-1 max-w-3xl chat-message-bubble",
                 message.sender === "user"
-                  ? "bg-purple-600 text-white rounded-lg px-4 py-2"
+                  ? "chat-message-user ml-12"
                   : message.error
-                    ? "bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-lg px-4 py-2"
-                    : "text-gray-900 dark:text-gray-100"
+                    ? "chat-message-error mr-12"
+                    : "chat-message-bot mr-12"
               )}>
                 {message.sender === "bot" ? (
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="chat-content">
                     <MarkdownRenderer content={message.content} />
                   </div>
                 ) : (
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
                 )}
               </div>
-
-              {message.sender === "user" && (
-                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                </div>
-              )}
             </div>
           ))}
 
-          {/* Typing Indicator (three dots) */}
+          {/* Typing Indicator */}
           {chatState.isTyping ? (
-            <div className="flex items-start justify-center space-x-3 max-w-4xl mx-auto">
-              <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <div className="flex items-start space-x-3 max-w-4xl mx-auto">
+              <div className="chat-avatar chat-avatar-bot">
+                <Bot className="w-4 h-4 text-white" />
               </div>
-              <div className="flex-1 max-w-3xl">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+              <div className="flex-1 max-w-3xl mr-12">
+                <div className="chat-message-bubble chat-message-bot">
+                  <div className="chat-typing-indicator">
+                    <div className="chat-typing-dot" />
+                    <div className="chat-typing-dot" style={{ animationDelay: '0.1s' }} />
+                    <div className="chat-typing-dot" style={{ animationDelay: '0.2s' }} />
+                  </div>
                 </div>
               </div>
             </div>
           ) : isProcessing && (
-            // Bot is thinking indicator (show only if not typing)
-            <div className="flex items-start justify-center space-x-3 max-w-4xl mx-auto">
-              <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            // Bot is thinking indicator
+            <div className="flex items-start space-x-3 max-w-4xl mx-auto">
+              <div className="chat-avatar chat-avatar-bot">
+                <Bot className="w-4 h-4 text-white" />
               </div>
-              <div className="flex-1 max-w-3xl">
-                <span className="italic text-gray-500 dark:text-gray-400">Bot is thinking...</span>
+              <div className="flex-1 max-w-3xl mr-12">
+                <div className="chat-message-bubble chat-message-bot">
+                  <span className="italic text-gray-500 dark:text-gray-400 text-sm">Bot is thinking...</span>
+                </div>
               </div>
             </div>
           )}
 
           <div ref={messagesEndRef} />
-          {/* Bot is thinking indicator */}
-
         </div>
 
         {/* Input Area */}
-        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:space-x-3">
-            {/* PDF Upload Button */}
-            <div className="flex items-center space-x-2 mb-2 md:mb-0">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="flex-shrink-0"
-                disabled={fileUpload.uploading || !currentChatId || currentChatId === "temp"}
-              >
-                <FileUp className="w-4 h-4 mr-2" />
-                Upload PDF
-              </Button>
-              {/* Hidden File Input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              {/* Show selected file and upload controls */}
+        <div className="chat-input-container p-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex flex-col gap-3">
+              {/* PDF Upload Section */}
               {fileUpload.file && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm truncate max-w-[120px]">{fileUpload.file.name}</span>
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <FileUp className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
+                    {fileUpload.file.name}
+                  </span>
                   {fileUpload.uploading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
                   ) : (
-                    <>
-                      <Button size="sm" variant="ghost" onClick={clearFile} className="h-6 w-6 p-0">
-                        <Trash2 className="w-3 h-3" />
+                    <div className="flex items-center space-x-2">
+                      <Button size="sm" variant="ghost" onClick={clearFile} className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20">
+                        <Trash2 className="w-3 h-3 text-red-500" />
                       </Button>
-                      <Button size="sm" onClick={handleFileSubmit} className="h-6 px-2 text-xs">
+                      <Button size="sm" onClick={handleFileSubmit} className="h-6 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white">
                         Upload
                       </Button>
-                    </>
+                    </div>
                   )}
                 </div>
               )}
-            </div>
-            {/* Chat Input */}
-            <div className="flex-1 flex items-center space-x-3">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={currentChatId && currentChatId !== "temp" ? "Type your message..." : "Type your first message to start chatting..."}
-                disabled={chatState.loading || chatState.isTyping || isProcessing}
-                className="w-full"
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!inputValue.trim() || chatState.loading || chatState.isTyping || isProcessing}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
+
+              {/* Main Input Section */}
+              <div className="flex items-end space-x-3">
+                {/* Auto-prompt Toggle */}
+                <div className="flex items-center space-x-2">
+                  <label className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={autoPromptOnUpload}
+                      onChange={(e) => setAutoPromptOnUpload(e.target.checked)}
+                      className="w-3 h-3 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                    />
+                    <span>Auto-prompt</span>
+                  </label>
+                  {autoPromptOnUpload && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPrompt = prompt("Customize default prompt:", defaultPrompt);
+                        if (newPrompt && newPrompt.trim()) {
+                          setDefaultPrompt(newPrompt.trim());
+                        }
+                      }}
+                      className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline"
+                      title="Customize default prompt"
+                    >
+                      Customize
+                    </button>
+                  )}
+                </div>
+
+                {/* PDF Upload Button */}
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  size="sm"
+                  className="flex-shrink-0 h-10 px-3 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  disabled={fileUpload.uploading || isProcessing}
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  PDF
+                </Button>
+                
+                {/* Hidden File Input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleCustomFileUpload}
+                  className="hidden"
+                />
+
+                {/* Chat Input */}
+                <div className="flex-1 relative">
+                  <textarea
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder={currentChatId && currentChatId !== "temp" ? "Type your message..." : "Type your first message to start chatting..."}
+                    disabled={chatState.loading || chatState.isTyping || isProcessing}
+                    className="chat-input-field"
+                    rows={1}
+                    style={{
+                      height: 'auto',
+                      minHeight: '44px'
+                    }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+                    }}
+                  />
+                </div>
+
+                {/* Send Button */}
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim() || chatState.loading || chatState.isTyping || isProcessing}
+                  className="chat-send-button"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Character count and status */}
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
+                <div className="flex items-center space-x-4">
+                  <span>{inputValue.length} characters</span>
+                  {autoPromptOnUpload && (
+                    <span className="text-purple-600 dark:text-purple-400">
+                      💡 Auto-prompt enabled
+                    </span>
+                  )}
+                </div>
+                <span>
+                  {chatState.isTyping ? "AI is typing..." : 
+                   isProcessing ? "Processing..." : 
+                   chatState.loading ? "Loading..." : "Ready"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
