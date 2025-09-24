@@ -40,19 +40,38 @@ const MCQ = ({ game }: Props) => {
   const { toast } = useToast();
 
   const currentQuestion = React.useMemo(() => {
-    return game.questions[questionIndex];
+    const question = game.questions[questionIndex];
+    console.log(`Current question ${questionIndex}:`, question);
+    return question;
   }, [questionIndex, game.questions]);
 
   const options = React.useMemo(() => {
     if (!currentQuestion?.options) return [];
     try {
+      // If options is already an array (new format), return it directly
       if (Array.isArray(currentQuestion.options)) {
+        console.log("Options is already an array:", currentQuestion.options);
         return currentQuestion.options;
       }
-      const optionsStr = currentQuestion.options.toString()
-        .replace(/'/g, '"')
-        .replace(/\\/g, '');
-      const parsed = JSON.parse(optionsStr);
+      
+      // Handle string options (legacy format - JSON stored as string in database)
+      const optionsStr = currentQuestion.options.toString();
+      console.log("Raw options string:", optionsStr);
+      
+      // Try to parse as JSON directly first
+      let parsed;
+      try {
+        parsed = JSON.parse(optionsStr);
+      } catch (jsonError) {
+        // If direct JSON parsing fails, try cleaning the string
+        const cleanedStr = optionsStr
+          .replace(/'/g, '"')
+          .replace(/\\/g, '');
+        console.log("Cleaned options string:", cleanedStr);
+        parsed = JSON.parse(cleanedStr);
+      }
+      
+      console.log("Parsed options:", parsed);
       return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
       console.error("Failed to parse options:", error, currentQuestion.options);
@@ -272,8 +291,15 @@ const MCQ = ({ game }: Props) => {
         </Card>
 
         <div className="flex flex-col items-center justify-center w-full mt-4 gap-3">
-          <AnimatePresence mode="wait">
-            {options.map((option, index) => (
+          {options.length === 0 ? (
+            <div className="text-red-500 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <p>Error: No options available for this question.</p>
+              <p className="text-sm mt-2">Question ID: {currentQuestion?.id}</p>
+              <p className="text-sm">Raw options: {JSON.stringify(currentQuestion?.options)}</p>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              {options.map((option, index) => (
               <motion.div
                 key={`${questionIndex}-${index}`}
                 initial={{ opacity: 0, x: -20 }}
@@ -309,6 +335,7 @@ const MCQ = ({ game }: Props) => {
               </motion.div>
             ))}
           </AnimatePresence>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}

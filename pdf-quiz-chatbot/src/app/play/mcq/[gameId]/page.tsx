@@ -5,15 +5,16 @@ import { redirect } from "next/navigation";
 import React from "react";
 
 type Props = {
-  params: {
+  params: Promise<{
     gameId: string;
-  };
+  }>;
 };
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const MCQPage = async ({ params: { gameId } }: Props) => {
+const MCQPage = async ({ params }: Props) => {
+  const { gameId } = await params;
   const session = await getAuthSession();
   if (!session?.user) {
     return redirect("/");

@@ -1,8 +1,6 @@
-import OpenAI from "openai";
+import axios from "axios";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const apiKey = process.env.DEEPSEEK_API_KEY;
 
 interface OutputFormat {
   [key: string]: string | string[] | OutputFormat;
@@ -14,7 +12,7 @@ export async function strict_output(
   output_format: OutputFormat,
   default_category: string = "",
   output_value_only: boolean = false,
-  model: string = "gpt-3.5-turbo",
+  model: string = "deepseek-chat",
   temperature: number = 1,
   num_tries: number = 3,
   verbose: boolean = false
@@ -53,21 +51,33 @@ export async function strict_output(
       output_format_prompt += `\nGenerate a list of json, one json for each input element.`;
     }
 
-    // Use OpenAI to get a response
-    const response = await openai.chat.completions.create({
-      model,
-      temperature,
-      messages: [
-        {
-          role: "system",
-          content: system_prompt + output_format_prompt + error_msg,
+    // Use DeepSeek API to get a response
+    const response = await axios.post(
+      "https://api.deepseek.com/v1/chat/completions",
+      {
+        model,
+        temperature,
+        messages: [
+          {
+            role: "system",
+            content: system_prompt + output_format_prompt + error_msg,
+          },
+          { role: "user", content: user_prompt.toString() },
+        ],
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
-        { role: "user", content: user_prompt.toString() },
-      ],
-    });
+      }
+    );
 
     let res: string =
-      response.choices[0].message?.content?.replace(/'/g, '"') ?? "";
+      response.data.choices[0]?.message?.content?.replace(/'/g, '"') ?? "";
+
+    // Remove markdown code blocks if present
+    res = res.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
 
     // ensure that we don't replace away apostrophes in text
     res = res.replace(/(\w)"(\w)/g, "$1'$2");
@@ -142,6 +152,9 @@ export async function strict_output(
       
       // Try to fix common JSON issues and retry
       try {
+        // Remove markdown code blocks if present
+        res = res.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+        
         // Remove any trailing commas
         res = res.replace(/,(\s*[}\]])/g, '$1');
         

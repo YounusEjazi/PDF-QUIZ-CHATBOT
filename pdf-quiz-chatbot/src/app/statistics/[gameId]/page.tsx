@@ -12,12 +12,13 @@ import QuestionsList from "@/components/statistics/QuestionsList";
 import { cn } from "@/lib/utils/utils";
 
 type Props = {
-  params: {
+  params: Promise<{
     gameId: string;
-  };
+  }>;
 };
 
-const Statistics = async ({ params: { gameId } }: Props) => {
+const Statistics = async ({ params }: Props) => {
+  const { gameId } = await params;
   console.log("Loading statistics page for gameId:", gameId);
   const session = await getAuthSession();
   if (!session?.user) {

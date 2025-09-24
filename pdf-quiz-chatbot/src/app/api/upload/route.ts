@@ -91,15 +91,32 @@ export async function POST(req: NextRequest) {
     await fs.unlink(tempFilePath);
 
     console.log("Processing selected pages...");
-    const textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
+    const textSplitter = new RecursiveCharacterTextSplitter({ 
+      chunkSize: 1500, 
+      chunkOverlap: 300,
+      separators: ["\n\n", "\n", ". ", "! ", "? ", " ", ""]
+    });
     const chunks: DocumentChunk[] = [];
 
-    // Only process selected pages
+    // Only process selected pages with improved text cleaning
     for (const page of pages) {
       const pageNumber = page.metadata.loc.pageNumber;
       if (selectedPages.includes(pageNumber)) {
+        // Clean and normalize text content
+        let cleanContent = page.pageContent
+          .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
+          .replace(/\n+/g, ' ') // Replace newlines with spaces
+          .replace(/\t+/g, ' ') // Replace tabs with spaces
+          .trim();
+        
+        // Skip empty or very short pages
+        if (cleanContent.length < 50) {
+          console.log(`Skipping page ${pageNumber} - content too short (${cleanContent.length} chars)`);
+          continue;
+        }
+
         const splitDocs = await textSplitter.splitDocuments([{
-          pageContent: page.pageContent.replace(/\n/g, ""),
+          pageContent: cleanContent,
           metadata: { pageNumber },
         }]);
         chunks.push(...(splitDocs as DocumentChunk[]));
@@ -139,54 +156,184 @@ export async function POST(req: NextRequest) {
     console.log("Upserting vectors to Pinecone...");
     await index.namespace(namespace).upsert(pineconeVectors);
 
+    // Wait for vectors to be indexed and verify they're searchable
+    console.log("Waiting for vectors to be indexed...");
+    let retryCount = 0;
+    const maxRetries = 10;
+    let vectorsSearchable = false;
+
+    while (retryCount < maxRetries && !vectorsSearchable) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+        
+        // Test if vectors are searchable
+        const testQuery = await generateEmbeddings(["test query"]);
+        const testResults = await index.namespace(namespace).query({
+          vector: testQuery[0],
+          topK: 1,
+          includeMetadata: true,
+        });
+        
+        if (testResults.matches && testResults.matches.length > 0) {
+          vectorsSearchable = true;
+          console.log("Vectors are now searchable!");
+        } else {
+          retryCount++;
+          console.log(`Vectors not yet searchable, retry ${retryCount}/${maxRetries}`);
+        }
+      } catch (error) {
+        retryCount++;
+        console.log(`Error testing vector searchability, retry ${retryCount}/${maxRetries}:`, error);
+      }
+    }
+
+    if (!vectorsSearchable) {
+      console.log("Warning: Vectors may not be fully indexed, proceeding anyway...");
+    }
+
     console.log("Generating questions...");
-    const context = texts.join("\n");
+    console.log(`Topic: ${topic}, Language: ${language}, Type: ${type}, Amount: ${amount}`);
+    console.log(`Total text chunks: ${chunks.length}, Total text length: ${texts.join('').length} characters`);
+    
+    // Use vector search to get the most relevant content for question generation
+    const { getRelevantContext } = await import("@/lib/ai/vectorSearch");
+    let relevantContext = "";
+    
+    try {
+      relevantContext = await getRelevantContext(
+        `Generate comprehensive questions about ${topic} covering key concepts, definitions, and important details`,
+        namespace,
+        8 // Get more context for better question generation
+      );
+      console.log(`Vector search returned context length: ${relevantContext?.length || 0} characters`);
+    } catch (error) {
+      console.log("Vector search failed, using fallback:", error);
+    }
+    
+    // Fallback to full context if vector search fails
+    const context = relevantContext && relevantContext.trim().length > 100 
+      ? relevantContext 
+      : texts.join("\n");
+    
+    console.log(`Final context length: ${context.length} characters`);
+    console.log(`Context preview: ${context.substring(0, 200)}...`);
 
     let questions: MCQQuestion[] | OpenEndedQuestion[];
     if (type === "open_ended") {
       questions = await strict_output(
-        `You are a helpful AI that generates fill-in-the-blank questions in ${language}. Follow these rules:
-        1. Each question should be a complete sentence from the context with 1-2 key terms replaced with blanks
-        2. The blanks should be for important terms, names, or concepts
-        3. The answer should be exactly the word(s) that fit in the blank
-        4. The question should provide enough context to determine the answer
-        5. The answer length should not exceed 15 words
-        Include the following context from a PDF: "${context}". Store all pairs in a JSON array.`,
+        `You are an expert AI that generates high-quality fill-in-the-blank questions in ${language}. 
+
+CRITICAL REQUIREMENTS:
+1. Each question must be a complete, grammatically correct sentence from the provided context
+2. Replace 1-2 key terms with blanks (_____) - focus on important concepts, names, dates, or technical terms
+3. The answer must be exactly the word(s) that fit in the blank(s)
+4. Provide sufficient context so the answer can be determined from the question
+5. Keep answers concise (max 15 words)
+6. Ensure questions test understanding, not just memorization
+7. Cover different aspects of the topic for variety
+
+CRITICAL JSON FORMATTING RULES:
+1. ALL keys must be in double quotes: "question", "answer"
+2. ALL values must be in double quotes: "What is...?", "Correct answer", etc.
+3. Escape quotes in text with backslashes: "golden \\"era\\""
+4. NO control characters (//, \\n, \\t) in values
+5. Proper JSON syntax with commas between items
+6. DO NOT wrap the response in markdown code blocks
+7. Return ONLY the raw JSON array, no additional formatting
+
+CONTEXT: "${context}"
+
+Generate ${amount} diverse fill-in-the-blank questions about ${topic}. Each question should test different concepts from the context.`,
         new Array(amount).fill(
-          `Generate a fill-in-the-blank question about ${topic} in ${language}, using a sentence from the context. Replace 1-2 key terms with blanks (_____).`
+          `Create a fill-in-the-blank question about ${topic} in ${language}. Use content from the provided context. Make it challenging but fair.`
         ),
         {
-          question: "question with blanks marked as _____",
-          answer: "exact word(s) that fit in the blank(s), max 15 words",
-        }
+          question: "complete sentence with _____ for blanks",
+          answer: "exact word(s) for the blank(s), max 15 words",
+        },
+        "",
+        false,
+        "deepseek-chat",
+        0.7,
+        3,
+        true
       );
     } else {
       questions = await strict_output(
-        `You are a helpful AI that generates MCQ questions in ${language}. The answer and options should not exceed 15 words each. 
-        
-CRITICAL JSON FORMATTING RULES:
-1. ALL keys must be in double quotes: "question", "answer", "option1", etc.
-2. ALL values must be in double quotes: "What is...", "Correct answer", etc.
-3. If any text contains quotes, escape them with backslashes: "golden \\"era\\""
-4. Do NOT use // or any control characters in values
-5. Use proper JSON syntax with commas between items
-6. Example format: {"question": "What is...?", "answer": "Correct answer", "option1": "Wrong 1", "option2": "Wrong 2", "option3": "Wrong 3"}
+        `You are an expert AI that generates high-quality multiple choice questions in ${language}.
 
-Include the following context from a PDF: "${context}". Store all questions, answers, and options in a JSON array.`,
+CRITICAL REQUIREMENTS:
+1. Create challenging but fair questions that test understanding of key concepts
+2. Base questions directly on the provided context
+3. Make incorrect options plausible but clearly wrong
+4. Ensure the correct answer is unambiguous
+5. Keep all text concise (max 20 words per option)
+6. Cover different aspects of the topic for variety
+7. Test both factual knowledge and conceptual understanding
+
+CRITICAL JSON FORMATTING RULES:
+1. ALL keys must be in double quotes: "question", "answer", "option1", "option2", "option3"
+2. ALL values must be in double quotes: "What is...?", "Correct answer", etc.
+3. Escape quotes in text with backslashes: "golden \\"era\\""
+4. NO control characters (//, \\n, \\t) in values
+5. Proper JSON syntax with commas between items
+6. DO NOT wrap the response in markdown code blocks
+7. Return ONLY the raw JSON array, no additional formatting
+8. Example: {"question": "What is...?", "answer": "Correct", "option1": "Wrong1", "option2": "Wrong2", "option3": "Wrong3"}
+
+CONTEXT: "${context}"
+
+Generate ${amount} diverse MCQ questions about ${topic}. Each question should test different concepts from the context.`,
         new Array(amount).fill(
-          `Generate a hard MCQ question about ${topic} in ${language}, considering the context above. Follow the JSON formatting rules exactly.`
+          `Create a challenging MCQ question about ${topic} in ${language}. Use the provided context. Make incorrect options plausible but clearly wrong. Follow JSON formatting exactly.`
         ),
         {
-          question: "question",
-          answer: "answer with max length of 15 words",
-          option1: "option1 with max length of 15 words",
-          option2: "option2 with max length of 15 words",
-          option3: "option3 with max length of 15 words",
-        }
+          question: "clear, specific question about the topic",
+          answer: "correct answer, max 20 words",
+          option1: "plausible but incorrect option, max 20 words",
+          option2: "plausible but incorrect option, max 20 words", 
+          option3: "plausible but incorrect option, max 20 words",
+        },
+        "",
+        false,
+        "deepseek-chat",
+        0.7,
+        3,
+        true
       );
     }
 
     console.log("Raw questions generated:", JSON.stringify(questions, null, 2));
+
+    // Validate questions were generated successfully
+    if (!questions || questions.length === 0) {
+      console.error("No questions generated by AI");
+      return NextResponse.json(
+        { error: "Failed to generate questions from the document. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    // Validate question structure
+    const validQuestions = questions.filter(q => {
+      if (type === "mcq") {
+        const mcqQ = q as MCQQuestion;
+        return mcqQ.question && mcqQ.answer && mcqQ.option1 && mcqQ.option2 && mcqQ.option3;
+      } else {
+        const openQ = q as OpenEndedQuestion;
+        return openQ.question && openQ.answer;
+      }
+    });
+
+    if (validQuestions.length === 0) {
+      console.error("No valid questions found after filtering");
+      return NextResponse.json(
+        { error: "Generated questions are invalid. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    console.log(`Valid questions: ${validQuestions.length}/${questions.length}`);
 
     // Ensure we have a valid user ID
     if (!session.user || !session.user.email) {
@@ -221,20 +368,20 @@ Include the following context from a PDF: "${context}". Store all questions, ans
 
     console.log("Game created successfully with ID:", game.id);
 
-    // Process questions based on type
+    // Process questions based on type using validated questions
     const processedQuestions = type === "mcq"
-      ? (questions as MCQQuestion[]).map((q) => {
+      ? (validQuestions as MCQQuestion[]).map((q) => {
           const options = [q.answer, q.option1, q.option2, q.option3];
           const shuffledOptions = options.sort(() => Math.random() - 0.5);
           return {
             question: q.question,
             answer: q.answer,
-            options: JSON.stringify(shuffledOptions),
+            options: shuffledOptions,
             gameId: game.id,
             questionType: type,
           };
         })
-      : (questions as OpenEndedQuestion[]).map((q) => ({
+      : (validQuestions as OpenEndedQuestion[]).map((q) => ({
           question: q.question,
           answer: q.answer,
           gameId: game.id,
