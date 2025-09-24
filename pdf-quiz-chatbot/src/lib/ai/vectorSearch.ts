@@ -23,7 +23,7 @@ export async function searchSimilarChunks(
       return [];
     }
 
-    console.log(`Generated query embedding with ${queryEmbedding.length} dimensions`);
+    console.log(`Generated query embedding with ${queryEmbedding.length} dimensions, first embedding has ${queryEmbedding[0]?.length || 0} values`);
 
     // Initialize Pinecone
     const pinecone = new Pinecone({
@@ -42,6 +42,9 @@ export async function searchSimilarChunks(
     });
 
     console.log(`Pinecone search response: ${searchResponse.matches?.length || 0} matches found`);
+    console.log(`Search query vector length: ${queryEmbedding[0].length}`);
+    console.log(`Search namespace: ${namespace}`);
+    console.log(`Search topK: ${topK}`);
     
     // Format the results
     const results: SearchResult[] = searchResponse.matches

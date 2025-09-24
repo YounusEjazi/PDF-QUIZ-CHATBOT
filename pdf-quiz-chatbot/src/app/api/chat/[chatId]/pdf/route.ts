@@ -17,9 +17,9 @@ interface DocumentChunk {
   metadata: ChunkMetadata;
 }
 
-export async function POST(req: NextRequest, { params }: { params: { chatId: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
   try {
-    const chatId = params.chatId;
+    const { chatId } = await params;
 
     if (!chatId) {
       return NextResponse.json({ error: "Chat ID is required." }, { status: 400 });
@@ -77,6 +77,9 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
     }));
 
     await index.namespace(namespace).upsert(pineconeVectors);
+    console.log(`Stored ${pineconeVectors.length} vectors in namespace: ${namespace}`);
+    console.log(`Vector dimensions: ${pineconeVectors[0]?.values?.length || 'unknown'}`);
+    console.log(`Sample vector metadata:`, pineconeVectors[0]?.metadata);
 
     // Store PDF context in the chat
     await prisma.chatContext.create({
@@ -86,6 +89,105 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
       },
     });
 
+    // Small delay to ensure Pinecone indexing is complete
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('Waited 2 seconds for Pinecone indexing to complete');
+
+    // Verify vectors were stored by doing a test query
+    try {
+      const testQuery = await index.namespace(namespace).query({
+        vector: new Array(1536).fill(0.1), // Dummy vector for testing
+        topK: 1,
+        includeMetadata: true,
+      });
+      console.log(`Verification query found ${testQuery.matches?.length || 0} vectors in namespace ${namespace}`);
+    } catch (error) {
+      console.error('Error verifying vector storage:', error);
+    }
+
+    // Update chat with PDF URL to mark it as processed
+    await prisma.chat.update({
+      where: { id: chatId },
+      data: { 
+        pdfUrl: uploadedFile.name,
+      },
+    });
+    console.log(`Updated chat ${chatId} with PDF URL: ${uploadedFile.name}`);
+
+    // Check for any queued prompts that were sent before PDF processing
+    const queuedMessages = await prisma.message.findMany({
+      where: {
+        chatId: chatId,
+        sender: "user",
+        createdAt: {
+          gte: new Date(Date.now() - 120000), // Messages from last 2 minutes
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    });
+
+    console.log(`Found ${queuedMessages.length} potential queued messages to process`);
+
+    // Process any queued prompts that were sent before PDF processing
+    for (const queuedMessage of queuedMessages) {
+      // Check if this message is about PDF analysis and doesn't have a bot response yet
+      const hasBotResponse = await prisma.message.findFirst({
+        where: {
+          chatId: chatId,
+          sender: "bot",
+          createdAt: {
+            gte: queuedMessage.createdAt,
+          },
+        },
+      });
+
+      if (!hasBotResponse && (queuedMessage.content.toLowerCase().includes('analyze') || 
+                             queuedMessage.content.toLowerCase().includes('document') ||
+                             queuedMessage.content.toLowerCase().includes('pdf'))) {
+        console.log(`Processing queued message: "${queuedMessage.content}"`);
+        
+        try {
+          // Get relevant context for the queued message
+          const { getRelevantContext } = await import("@/lib/ai/vectorSearch");
+          const relevantContext = await getRelevantContext(queuedMessage.content, chatId, 5);
+          
+          let systemPrompt = "You are a helpful assistant. Answer questions clearly and concisely.";
+          if (relevantContext && relevantContext.trim().length > 40) {
+            systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- ALWAYS cite page numbers when referencing specific information from the document\n- When users ask about specific pages (e.g., "tell me about page 5"), focus on content from that page\n- If users ask "what's on page X", provide a summary of that specific page's content\n- Keep responses clear and well-structured\n- Include page references in your answers when discussing document content`;
+          }
+
+          // Generate bot response
+          const { strict_output } = await import("@/lib/ai/gptforchatbot");
+          const botResponse = await strict_output(
+            systemPrompt,
+            queuedMessage.content,
+            { answer: "string" },
+            "",
+            false,
+            "deepseek-chat",
+            0.7,
+            3,
+            false
+          );
+
+          const queuedBotResponse = botResponse.answer || "I apologize, but I couldn't generate a response. Please try again.";
+
+          // Save the bot response
+          await prisma.message.create({
+            data: {
+              chatId: chatId,
+              content: queuedBotResponse,
+              sender: "bot",
+            },
+          });
+
+          console.log(`Successfully processed queued message and generated response`);
+        } catch (error) {
+          console.error(`Error processing queued message: ${error}`);
+        }
+      }
+    }
 
     // If a prompt was provided, save it as a user message IMMEDIATELY
     let botResponseText = null;
@@ -120,8 +222,10 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
       if (chat?.pdfUrl) {
         // Use vector search to find relevant context
         try {
+          console.log(`PDF route: Searching for context for prompt: "${prompt}" in chatId: ${chatId}`);
           const { getRelevantContext } = await import("@/lib/ai/vectorSearch");
           const relevantContext = await getRelevantContext(prompt, chatId, 5);
+          console.log(`PDF route: Found context length: ${relevantContext ? relevantContext.length : 0}`);
           if (relevantContext && relevantContext.trim().length > 40) {
             hasContext = true;
             systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely. If the user's question is not related to the document context, you can still provide general assistance.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- ALWAYS cite page numbers when referencing specific information from the document\n- When users ask about specific pages (e.g., "tell me about page 5"), focus on content from that page\n- If users ask "what's on page X", provide a summary of that specific page's content\n- Keep responses clear and well-structured\n- Include page references in your answers when discussing document content`;

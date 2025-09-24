@@ -75,12 +75,39 @@ export const POST = async (req: Request) => {
       userMessage,
       targetChatId,
       chatId: chatId,
-      chatExists: !!chat
+      chatExists: !!chat,
+      chatCreatedAt: chat?.createdAt
     });
     
+    // Check if this is a PDF-related query and if PDF is being processed
+    const isPDFQuery = promptMentionsPDF(userMessage);
+    const chatAge = chat?.createdAt ? Date.now() - new Date(chat.createdAt).getTime() : 0;
+    const isRecentChat = chatAge < 60000; // Less than 1 minute old
+    const hasNoPDFUrl = !chat?.pdfUrl;
+    
+    // If this is a PDF query in a recent chat without PDF URL, it might be processing
+    if (isPDFQuery && isRecentChat && hasNoPDFUrl) {
+      console.log('PDF query in recent chat without PDF URL - PDF might be processing');
+      // Save the user message but don't respond yet
+      await prisma.message.create({
+        data: {
+          chatId: targetChatId,
+          content: userMessage,
+          sender: "user",
+        },
+      });
+      
+      // Return a response indicating PDF is being processed
+      return NextResponse.json({
+        message: "I can see you're asking about a document. It looks like a PDF might be uploading or processing. Please wait a moment for the document to be fully processed, then ask your question again. I'll be able to analyze the document content once it's ready!",
+        chatId: targetChatId,
+        isProcessing: true,
+      });
+    }
+
     // Always try vector search if prompt mentions PDF, regardless of pdfUrl
     // This handles cases where PDF was uploaded but pdfUrl might not be set yet
-    if (promptMentionsPDF(userMessage)) {
+    if (isPDFQuery) {
       const t0 = Date.now();
       console.log('Prompt is about PDF, performing vector search...');
       // Get more chunks for better context, especially for page-specific questions
@@ -105,8 +132,17 @@ export const POST = async (req: Request) => {
       hasContext = false;
       // If user is asking about document analysis but no context found, provide helpful guidance
       if (promptMentionsPDF(userMessage)) {
-        systemPrompt = `The user is asking about document analysis, but no document context is currently available. Please respond by explaining that you'd be happy to help analyze a document, but you need them to upload a document first. Provide helpful guidance on how to upload and analyze documents. Be encouraging and explain the types of analysis you can perform once a document is uploaded.`;
-        console.log('User asking about PDF but no context found, providing upload guidance');
+        // Check if chat was created very recently (might indicate PDF upload in progress)
+        const chatAge = chat?.createdAt ? Date.now() - new Date(chat.createdAt).getTime() : 0;
+        const isRecentChat = chatAge < 30000; // Less than 30 seconds old
+        
+        if (isRecentChat) {
+          systemPrompt = `The user is asking about document analysis, and this appears to be a very recent chat (created ${Math.round(chatAge/1000)} seconds ago). They may have just uploaded a PDF document that is still being processed. Please respond by explaining that you'd be happy to help analyze their document once it's fully processed. Mention that PDF processing can take a moment, especially for larger documents, and suggest they wait a few seconds and then ask their question again. Be encouraging and mention that you can help with summarization, key point extraction, and answering specific questions about the content once the document is ready.`;
+          console.log('User asking about PDF in recent chat, suggesting wait for processing');
+        } else {
+          systemPrompt = `The user is asking about document analysis, but no document context is currently available. Please respond by explaining that you'd be happy to help analyze a document once it's uploaded. Be encouraging and explain that you can help with various types of analysis including summarization, key point extraction, sentiment analysis, and answering specific questions about the content. Mention that they can upload a PDF document and then ask questions about it.`;
+          console.log('User asking about PDF but no context found, providing upload guidance');
+        }
       } else {
         systemPrompt = `You are a helpful assistant. Answer questions clearly and concisely.\n\nHere is the recent chat history for context:\n${chatHistory}`;
         console.log('No relevant PDF context or not a PDF question, using chat memory only.');
