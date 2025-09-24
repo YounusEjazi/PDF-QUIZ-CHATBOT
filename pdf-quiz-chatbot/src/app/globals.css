@@ -282,7 +282,7 @@ body[class*="h-full"] {
 
   /* Markdown content styling */
   .chat-content {
-    @apply text-sm leading-relaxed;
+    @apply text-sm leading-relaxed text-gray-900 dark:text-gray-100;
   }
 
   .chat-content h1,

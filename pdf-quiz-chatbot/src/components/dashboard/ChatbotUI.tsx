@@ -34,7 +34,7 @@ const ChatbotUI = () => {
         "group relative overflow-hidden transition-all duration-300 cursor-pointer",
         "bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50",
         "border border-emerald-200/50 dark:border-emerald-800/50",
-        "hover:shadow-xl hover:shadow-emerald-500/25 hover:scale-[1.02]"
+        "hover:shadow-xl hover:shadow-emerald-500/25"
       )}
       onClick={startNewChat}
     >

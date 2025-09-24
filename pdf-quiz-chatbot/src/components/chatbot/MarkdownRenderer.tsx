@@ -389,20 +389,18 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   };
 
   return (
-    <div className={cn("markdown-container", className)}>
+    <div className={cn("markdown-container text-gray-900 dark:text-gray-100", className)}>
       {renderContent()}
       <style jsx>{`
         .markdown-container {
           font-size: 14px !important;
           line-height: 1.7;
-          color: #23272f;
           word-break: break-word;
         }
 
         .markdown-body {
           font-size: 14px !important;
           line-height: 1.7;
-          color: #23272f;
           word-break: break-word;
         }
 

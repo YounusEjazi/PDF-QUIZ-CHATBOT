@@ -35,7 +35,7 @@ const HotTopicsCard = ({ topics = [] }: Props) => {
       "group relative overflow-hidden transition-all duration-300",
       "bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/50 dark:to-red-950/50",
       "border border-orange-200/50 dark:border-orange-800/50",
-      "hover:shadow-xl hover:shadow-orange-500/25 hover:scale-[1.02]"
+      "hover:shadow-xl hover:shadow-orange-500/25"
     )}>
       {/* Enhanced Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

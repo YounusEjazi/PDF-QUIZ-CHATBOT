@@ -34,7 +34,7 @@ const RecentActivityCard = async (props: Props) => {
       "group relative overflow-hidden transition-all duration-300",
       "bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50",
       "border border-indigo-200/50 dark:border-indigo-800/50",
-      "hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-[1.02]"
+      "hover:shadow-xl hover:shadow-indigo-500/25"
     )}>
       {/* Enhanced Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -48,7 +48,7 @@ const RecentActivityCard = async (props: Props) => {
       <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0 relative z-10">
         <div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-br from-indigo-700 via-indigo-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-300 dark:via-indigo-200 dark:to-purple-300">
-            <Link href="/history" className="hover:opacity-80 transition-opacity">Recent Activity</Link>
+            <Link href="/history" className="focus:outline-none focus:ring-2 focus:ring-indigo-500/50 rounded-md px-1 -mx-1">Recent Activity</Link>
           </CardTitle>
           <CardDescription className="text-slate-600 dark:text-slate-300">
             You have played a total of {games_count} quizzes

@@ -15,7 +15,7 @@ const HistoryCard = (props: Props) => {
         "group relative overflow-hidden transition-all duration-300 cursor-pointer",
         "bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50",
         "border border-blue-200/50 dark:border-blue-800/50",
-        "hover:shadow-xl hover:shadow-blue-500/25 hover:scale-[1.02]"
+        "hover:shadow-xl hover:shadow-blue-500/25"
       )}
       onClick={() => {
         router.push("/history");
