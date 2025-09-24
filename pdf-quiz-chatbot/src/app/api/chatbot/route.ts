@@ -96,6 +96,20 @@ export const POST = async (req: Request) => {
           sender: "user",
         },
       });
+
+      // Update chat name to the first user message if it's still "New Chat"
+      const currentChat = await prisma.chat.findUnique({
+        where: { id: targetChatId },
+        select: { name: true },
+      });
+
+      if (currentChat?.name === "New Chat" || !currentChat?.name) {
+        await prisma.chat.update({
+          where: { id: targetChatId },
+          data: { name: userMessage }, // Update chat name to the first user message
+        });
+        console.log(`Updated chat name to: "${userMessage}"`);
+      }
       
       // Return a response indicating PDF is being processed
       return NextResponse.json({
@@ -182,6 +196,20 @@ export const POST = async (req: Request) => {
         },
       ],
     });
+
+    // Update chat name to the first user message if it's still "New Chat"
+    const currentChat = await prisma.chat.findUnique({
+      where: { id: targetChatId },
+      select: { name: true },
+    });
+
+    if (currentChat?.name === "New Chat" || !currentChat?.name) {
+      await prisma.chat.update({
+        where: { id: targetChatId },
+        data: { name: userMessage }, // Update chat name to the first user message
+      });
+      console.log(`Updated chat name to: "${userMessage}"`);
+    }
 
     // The strict_output function returns a string, so we wrap it in the expected format
     return NextResponse.json({ 

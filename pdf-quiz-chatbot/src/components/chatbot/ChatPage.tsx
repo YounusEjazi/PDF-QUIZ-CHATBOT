@@ -825,16 +825,10 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
                 message.sender === "user" ? "flex-row-reverse space-x-reverse" : ""
               )}
             >
-              {/* Avatar */}
+              {/* Avatar - Only show for bot messages */}
               {message.sender === "bot" && (
                 <div className="chat-avatar chat-avatar-bot">
                   <Bot className="w-4 h-4 text-white" />
-                </div>
-              )}
-              
-              {message.sender === "user" && (
-                <div className="chat-avatar chat-avatar-user">
-                  <User className="w-4 h-4 text-white" />
                 </div>
               )}
               
@@ -897,18 +891,6 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
             <div className="flex flex-col gap-3">
               {/* Main Input Section with integrated file preview */}
               <div className="flex items-end space-x-3">
-
-                {/* PDF Upload Button */}
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  size="sm"
-                  className="flex-shrink-0 h-10 px-3 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  disabled={fileUpload.uploading || isProcessing}
-                >
-                  <FileUp className="w-4 h-4 mr-2" />
-                  PDF
-                </Button>
                 
                 {/* Hidden File Input */}
                 <input
@@ -933,7 +915,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
                     placeholder={currentChatId && currentChatId !== "temp" ? "Type your message..." : "Type your first message to start chatting..."}
                     disabled={chatState.loading || chatState.isTyping || isProcessing}
                     className={cn(
-                      "chat-input-field",
+                      "chat-input-field pl-10",
                       fileUpload.file && "pb-16"
                     )}
                     rows={1}
@@ -947,6 +929,30 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
                       target.style.height = Math.min(target.scrollHeight, 128) + 'px';
                     }}
                   />
+                  
+                  {/* Clipboard Icon for PDF Upload */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={fileUpload.uploading || isProcessing}
+                    className="absolute left-3 top-3 p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Upload PDF"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                      />
+                    </svg>
+                  </button>
                   
                   {/* File Preview inside input */}
                   {fileUpload.file && (

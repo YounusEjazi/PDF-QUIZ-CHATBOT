@@ -216,6 +216,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cha
           sender: "user",
         },
       });
+
+      // Update chat name to the first user message if it's still "New Chat"
+      const currentChat = await prisma.chat.findUnique({
+        where: { id: chatId },
+        select: { name: true },
+      });
+
+      if (currentChat?.name === "New Chat" || !currentChat?.name) {
+        await prisma.chat.update({
+          where: { id: chatId },
+          data: { name: prompt }, // Update chat name to the first user message
+        });
+        console.log(`Updated chat name to: "${prompt}"`);
+      }
     }
 
     // ... PDF processing, embedding, context storage ...
