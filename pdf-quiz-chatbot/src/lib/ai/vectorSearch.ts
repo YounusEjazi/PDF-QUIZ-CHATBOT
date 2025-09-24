@@ -131,7 +131,17 @@ export async function getRelevantContext(
     
     if (testResults.length === 0) {
       console.log(`No content found in namespace ${namespace} - PDF may not be uploaded or processed yet`);
-      return "";
+      // Try waiting a bit and retrying in case of indexing delays
+      console.log(`Waiting 5 seconds and retrying search...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      const retryResults = await searchSimilarChunks("test", namespace, 1);
+      if (retryResults.length > 0) {
+        console.log(`Retry found ${retryResults.length} chunks after waiting`);
+      } else {
+        console.log(`Still no chunks found after retry`);
+        return "";
+      }
     }
     
     // Check if user is asking about a specific page
@@ -153,7 +163,15 @@ export async function getRelevantContext(
     let searchResults = await searchSimilarChunks(userMessage, namespace, topK);
     console.log(`Search results found: ${searchResults.length} chunks`);
     
-    // If no results found and the query is generic (like "analyze this"), try a broader search
+    // If no results found, wait and retry (Pinecone indexing delay)
+    if (searchResults.length === 0) {
+      console.log(`No results found, waiting 3 seconds and retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      searchResults = await searchSimilarChunks(userMessage, namespace, topK);
+      console.log(`Retry search results: ${searchResults.length} chunks`);
+    }
+    
+    // If still no results found and the query is generic (like "analyze this"), try a broader search
     if (searchResults.length === 0 && (userMessage.toLowerCase().includes('analyze') || userMessage.toLowerCase().includes('summarize'))) {
       console.log(`No results for specific query, trying broader search...`);
       searchResults = await searchSimilarChunks("document content summary", namespace, topK);

@@ -89,20 +89,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cha
       },
     });
 
-    // Small delay to ensure Pinecone indexing is complete
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('Waited 2 seconds for Pinecone indexing to complete');
-
-    // Verify vectors were stored by doing a test query
-    try {
-      const testQuery = await index.namespace(namespace).query({
-        vector: new Array(1536).fill(0.1), // Dummy vector for testing
-        topK: 1,
-        includeMetadata: true,
-      });
-      console.log(`Verification query found ${testQuery.matches?.length || 0} vectors in namespace ${namespace}`);
-    } catch (error) {
-      console.error('Error verifying vector storage:', error);
+    // Wait for Pinecone indexing with retry mechanism
+    let vectorsAvailable = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!vectorsAvailable && attempts < maxAttempts) {
+      attempts++;
+      console.log(`Waiting for Pinecone indexing... Attempt ${attempts}/${maxAttempts}`);
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+      
+      try {
+        const testQuery = await index.namespace(namespace).query({
+          vector: new Array(1536).fill(0.1), // Dummy vector for testing
+          topK: 1,
+          includeMetadata: true,
+        });
+        
+        if (testQuery.matches && testQuery.matches.length > 0) {
+          vectorsAvailable = true;
+          console.log(`Verification query found ${testQuery.matches.length} vectors in namespace ${namespace} after ${attempts} attempts`);
+        } else {
+          console.log(`Verification query found 0 vectors in namespace ${namespace} after ${attempts} attempts`);
+        }
+      } catch (error) {
+        console.error(`Error verifying vector storage (attempt ${attempts}):`, error);
+      }
+    }
+    
+    if (!vectorsAvailable) {
+      console.warn(`Vectors still not available after ${maxAttempts} attempts. Proceeding anyway...`);
     }
 
     // Update chat with PDF URL to mark it as processed
