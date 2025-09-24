@@ -59,8 +59,10 @@ export const POST = async (req: Request) => {
         "pdf", "document", "file", "page", "section", "paragraph", 
         "text above", "analyze this", "analyze", "summarize", "explain",
         "what does it say", "what is in", "tell me about", "describe",
+        "what is this about", "what is this", "what's this", "what's it about",
         "in the doc", "in the file", "in the document", "from the document",
-        "this document", "the document", "the file", "the pdf"
+        "this document", "the document", "the file", "the pdf", "this file",
+        "content", "information", "details", "overview", "summary"
       ];
       return pdfKeywords.some(kw => prompt.toLowerCase().includes(kw));
     }
@@ -70,7 +72,10 @@ export const POST = async (req: Request) => {
       hasPdfUrl: !!chat?.pdfUrl, 
       pdfUrl: chat?.pdfUrl,
       promptMentionsPDF: promptMentionsPDF(userMessage),
-      userMessage 
+      userMessage,
+      targetChatId,
+      chatId: chatId,
+      chatExists: !!chat
     });
     
     // Always try vector search if prompt mentions PDF, regardless of pdfUrl
@@ -83,7 +88,13 @@ export const POST = async (req: Request) => {
       console.log('Vector search took', Date.now() - t0, 'ms');
       console.log('Relevant context found:', relevantContext ? 'Yes' : 'No', 'Length:', relevantContext.length);
     } else {
-      console.log('Skipping vector search - prompt not PDF-related');
+      // Even if prompt doesn't explicitly mention PDF, try vector search anyway
+      // This helps with general questions about uploaded documents
+      console.log('Prompt may be about document content, trying vector search...');
+      const t0 = Date.now();
+      relevantContext = await getRelevantContext(userMessage, targetChatId, 3);
+      console.log('Vector search took', Date.now() - t0, 'ms');
+      console.log('Relevant context found:', relevantContext ? 'Yes' : 'No', 'Length:', relevantContext.length);
     }
 
     if (relevantContext && relevantContext.trim().length > 40) {
@@ -92,8 +103,14 @@ export const POST = async (req: Request) => {
       console.log('Using RAG context for response');
     } else {
       hasContext = false;
-      systemPrompt = `You are a helpful assistant. Answer questions clearly and concisely.\n\nHere is the recent chat history for context:\n${chatHistory}`;
-      console.log('No relevant PDF context or not a PDF question, using chat memory only.');
+      // If user is asking about document analysis but no context found, provide helpful guidance
+      if (promptMentionsPDF(userMessage)) {
+        systemPrompt = `The user is asking about document analysis, but no document context is currently available. Please respond by explaining that you'd be happy to help analyze a document, but you need them to upload a document first. Provide helpful guidance on how to upload and analyze documents. Be encouraging and explain the types of analysis you can perform once a document is uploaded.`;
+        console.log('User asking about PDF but no context found, providing upload guidance');
+      } else {
+        systemPrompt = `You are a helpful assistant. Answer questions clearly and concisely.\n\nHere is the recent chat history for context:\n${chatHistory}`;
+        console.log('No relevant PDF context or not a PDF question, using chat memory only.');
+      }
     }
 
     console.log('System prompt length:', systemPrompt.length);

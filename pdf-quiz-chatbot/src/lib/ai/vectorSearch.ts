@@ -13,6 +13,8 @@ export async function searchSimilarChunks(
   topK: number = 5
 ): Promise<SearchResult[]> {
   try {
+    console.log(`Searching for: "${query}" in namespace: ${namespace} with topK: ${topK}`);
+    
     // Generate embedding for the query
     const queryEmbedding = await generateEmbeddings([query]);
     
@@ -21,6 +23,8 @@ export async function searchSimilarChunks(
       return [];
     }
 
+    console.log(`Generated query embedding with ${queryEmbedding.length} dimensions`);
+
     // Initialize Pinecone
     const pinecone = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY!,
@@ -28,6 +32,7 @@ export async function searchSimilarChunks(
 
     const indexName = process.env.PINECONE_INDEX_NAME || "quickstart";
     const index = pinecone.index(indexName);
+    console.log(`Using Pinecone index: ${indexName}`);
 
     // Search for similar vectors
     const searchResponse = await index.namespace(namespace).query({
@@ -36,6 +41,8 @@ export async function searchSimilarChunks(
       includeMetadata: true,
     });
 
+    console.log(`Pinecone search response: ${searchResponse.matches?.length || 0} matches found`);
+    
     // Format the results
     const results: SearchResult[] = searchResponse.matches
       .filter(match => match.metadata && match.score)
@@ -46,6 +53,9 @@ export async function searchSimilarChunks(
       }));
 
     console.log(`Found ${results.length} relevant chunks for query: "${query}" in namespace: ${namespace}`);
+    if (results.length > 0) {
+      console.log(`Top result: Page ${results[0].pageNumber}, Score: ${results[0].score}, Text preview: ${results[0].text.substring(0, 100)}...`);
+    }
     return results;
   } catch (error) {
     console.error("Error in vector search:", error);
@@ -109,6 +119,17 @@ export async function getRelevantContext(
 ): Promise<string> {
   try {
     const namespace = `chat-${chatId}`;
+    console.log(`Getting relevant context for message: "${userMessage}" in namespace: ${namespace}`);
+    
+    // First, let's check if there are any chunks at all in this namespace
+    console.log(`Checking if namespace ${namespace} has any content...`);
+    const testResults = await searchSimilarChunks("test", namespace, 1);
+    console.log(`Namespace ${namespace} has ${testResults.length} chunks available`);
+    
+    if (testResults.length === 0) {
+      console.log(`No content found in namespace ${namespace} - PDF may not be uploaded or processed yet`);
+      return "";
+    }
     
     // Check if user is asking about a specific page
     const requestedPage = extractPageNumber(userMessage);
@@ -125,10 +146,37 @@ export async function getRelevantContext(
     }
     
     // For non-page-specific queries, use semantic search
-    const searchResults = await searchSimilarChunks(userMessage, namespace, topK);
+    console.log(`Performing semantic search for: "${userMessage}"`);
+    let searchResults = await searchSimilarChunks(userMessage, namespace, topK);
+    console.log(`Search results found: ${searchResults.length} chunks`);
+    
+    // If no results found and the query is generic (like "analyze this"), try a broader search
+    if (searchResults.length === 0 && (userMessage.toLowerCase().includes('analyze') || userMessage.toLowerCase().includes('summarize'))) {
+      console.log(`No results for specific query, trying broader search...`);
+      searchResults = await searchSimilarChunks("document content summary", namespace, topK);
+      console.log(`Broader search results: ${searchResults.length} chunks`);
+    }
     
     if (searchResults.length === 0) {
-      return "";
+      console.log(`No search results found for namespace: ${namespace}`);
+      // Try to get any content from the document as a last resort
+      console.log(`Trying to get any content from the document...`);
+      const fallbackResults = await searchSimilarChunks("content", namespace, 3);
+      if (fallbackResults.length > 0) {
+        console.log(`Found ${fallbackResults.length} fallback results`);
+        searchResults = fallbackResults;
+      } else {
+        // If still no results, wait a bit and try again (in case PDF is still being processed)
+        console.log(`No results found, waiting 2 seconds and retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const retryResults = await searchSimilarChunks("content", namespace, 3);
+        if (retryResults.length > 0) {
+          console.log(`Found ${retryResults.length} results on retry`);
+          searchResults = retryResults;
+        } else {
+          return "";
+        }
+      }
     }
 
     // Combine relevant chunks into context
@@ -136,6 +184,7 @@ export async function getRelevantContext(
       .map(result => `Page ${result.pageNumber}: ${result.text}`)
       .join("\n\n");
 
+    console.log(`Context length: ${context.length} characters`);
     return context;
   } catch (error) {
     console.error("Error getting relevant context:", error);

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/db";
 
 // Fetch messages
-export async function GET(req: Request, { params }: { params: { chatId: string } }) {
-  const { chatId } = params;
+export async function GET(req: Request, { params }: { params: Promise<{ chatId: string }> }) {
+  const { chatId } = await params;
 
   if (!chatId) {
     return NextResponse.json(
@@ -29,8 +29,8 @@ export async function GET(req: Request, { params }: { params: { chatId: string }
 }
 
 // Save a new message and update the chat name if needed
-export async function POST(req: Request, { params }: { params: { chatId: string } }) {
-  const { chatId } = params;
+export async function POST(req: Request, { params }: { params: Promise<{ chatId: string }> }) {
+  const { chatId } = await params;
   const { sender, content, role } = await req.json();
 
   if (!chatId || !content) {
