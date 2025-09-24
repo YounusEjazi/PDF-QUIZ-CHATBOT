@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FilePlus, ChevronUp, Link } from "lucide-react";
+import { FilePlus, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import axios, { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
@@ -194,13 +194,6 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
                       onChange={handleFileUpload}
                     />
                   </label>
-                  <button
-                    onClick={() => alert("External Link Upload Coming Soon!")}
-                    className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors border-t border-gray-200/50 dark:border-gray-700/50"
-                  >
-                    <Link className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                    <span className="text-gray-700 dark:text-gray-300">Upload Link</span>
-                  </button>
                 </div>
               )}
             </div>
