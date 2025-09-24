@@ -7,7 +7,6 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { generateEmbeddings } from "@/lib/ai/openai";
 import { prisma } from "@/lib/db/db";
 
-const PDF_SUCCESS_MESSAGE = "📚 PDF processed successfully! I've analyzed the document and I'm ready to answer your questions about it.";
 
 interface ChunkMetadata {
   pageNumber: number;
@@ -122,10 +121,10 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
         // Use vector search to find relevant context
         try {
           const { getRelevantContext } = await import("@/lib/ai/vectorSearch");
-          const relevantContext = await getRelevantContext(prompt, chatId);
+          const relevantContext = await getRelevantContext(prompt, chatId, 5);
           if (relevantContext && relevantContext.trim().length > 40) {
             hasContext = true;
-            systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely. If the user's question is not related to the document context, you can still provide general assistance.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- Be accurate and cite page numbers when referencing specific information\n- Keep responses clear and well-structured`;
+            systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely. If the user's question is not related to the document context, you can still provide general assistance.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- ALWAYS cite page numbers when referencing specific information from the document\n- When users ask about specific pages (e.g., "tell me about page 5"), focus on content from that page\n- If users ask "what's on page X", provide a summary of that specific page's content\n- Keep responses clear and well-structured\n- Include page references in your answers when discussing document content`;
           } else {
             // No meaningful context found, use general prompt
             hasContext = false;
@@ -138,7 +137,7 @@ export async function POST(req: NextRequest, { params }: { params: { chatId: str
         }
       }
       // Generate bot answer
-      const { strict_output } = await import("@/lib/ai/gpt2");
+      const { strict_output } = await import("@/lib/ai/gptforchatbot");
       botResponseText = await strict_output(
         systemPrompt,
         prompt,

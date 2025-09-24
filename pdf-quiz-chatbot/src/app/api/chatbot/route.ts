@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { strict_output } from "@/lib/ai/gpt2"; 
+import { strict_output } from "@/lib/ai/gptforchatbot"; 
 import { prisma } from "@/lib/db/db";
 import { getRelevantContext } from "@/lib/ai/vectorSearch";
 
@@ -42,14 +42,14 @@ export const POST = async (req: Request) => {
     if (chat?.pdfUrl && promptMentionsPDF(userMessage)) {
       const t0 = Date.now();
       console.log('Prompt is about PDF, performing vector search...');
-      // Only get 1 chunk for speed
-      relevantContext = await getRelevantContext(userMessage, chatId, 1);
+      // Get more chunks for better context, especially for page-specific questions
+      relevantContext = await getRelevantContext(userMessage, chatId, 3);
       console.log('Vector search took', Date.now() - t0, 'ms');
     }
 
     if (relevantContext && relevantContext.trim().length > 40) {
       hasContext = true;
-      systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- Be accurate and cite page numbers when referencing specific information\n- Keep responses clear and well-structured`;
+      systemPrompt = `You are a helpful assistant with access to document context. Use the provided context to answer questions accurately and concisely.\n\nDocument Context:\n${relevantContext}\n\nInstructions:\n- Answer questions based on the document context when relevant\n- If the question is not covered in the context, say so and provide general assistance\n- ALWAYS cite page numbers when referencing specific information from the document\n- When users ask about specific pages (e.g., "tell me about page 5"), focus on content from that page\n- If users ask "what's on page X", provide a summary of that specific page's content\n- Keep responses clear and well-structured\n- Include page references in your answers when discussing document content`;
       console.log('Using RAG context for response');
     } else {
       hasContext = false;

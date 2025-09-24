@@ -40,8 +40,6 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   const [creatingChat, setCreatingChat] = useState(false);
   const [isNewChat, setIsNewChat] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // for PDF+prompt
-  const [autoPromptOnUpload, setAutoPromptOnUpload] = useState(true); // New state for auto-prompt feature
-  const [defaultPrompt, setDefaultPrompt] = useState("Please analyze this PDF and provide a summary of its key points.");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -51,15 +49,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   // Always use the latest currentChatId for hooks
   const chatIdForHooks = currentChatId || "temp";
   const { chatState, sendMessage, fetchMessages, retry } = useChat(chatIdForHooks);
-  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(chatIdForHooks, (fileName: string) => {
-    // Callback when file upload is successful
-    if (autoPromptOnUpload) {
-      // Automatically send a prompt after successful upload
-      const defaultPrompt = "Please analyze this PDF and provide a summary of its key points.";
-      setInputValue(defaultPrompt);
-      // The prompt will be sent automatically in the next render cycle
-    }
-  });
+  const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(chatIdForHooks);
   const { chatsState, createChat, deleteChat, updateChatName } = useChats();
 
   const scrollToBottom = useCallback(() => {
@@ -283,70 +273,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
 
   // Custom file upload handler with auto-prompt support
   const handleCustomFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // First, set the file in the upload state
     handleFileUpload(event);
-
-    // If auto-prompt is enabled, automatically upload with a default prompt
-    if (autoPromptOnUpload) {
-      handleAutoUploadWithPrompt(file, defaultPrompt);
-    }
-  }, [handleFileUpload, autoPromptOnUpload]);
-
-  // New function to handle automatic PDF upload with prompt
-  const handleAutoUploadWithPrompt = useCallback(async (file: File, prompt: string) => {
-    if (!file) return;
-
-    setIsProcessing(true);
-
-    // Add optimistic user message
-    const optimisticMsg = {
-      id: Date.now().toString() + '-user',
-      sender: "user" as const,
-      content: `📄 Uploaded: ${file.name}\n\n${prompt}`,
-      createdAt: new Date(),
-      optimistic: true,
-    };
-    setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
-
-    try {
-      // If no chat ID, create one first
-      let targetChatId = currentChatId;
-      if (!currentChatId || currentChatId === "temp") {
-        targetChatId = await createNewChat();
-        setCurrentChatId(targetChatId);
-      }
-
-      // Prepare FormData
-      const formData = new FormData();
-      formData.append("pdf", file);
-      formData.append("prompt", prompt);
-
-      // Upload PDF and prompt together
-      const response = await axios.post(`/api/chat/${targetChatId}/pdf`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (progressEvent) => {
-          const progress = progressEvent.total
-            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            : 0;
-          // Optionally set upload progress state here
-        },
-      });
-
-      // Clear file and fetch messages
-      await fetchMessages();
-      setOptimisticMessages([]);
-      clearFile();
-      setIsNewChat(false);
-      setIsProcessing(false);
-    } catch (error) {
-      console.error("Failed to upload PDF with prompt:", error);
-      setIsProcessing(false);
-      setOptimisticMessages([]);
-    }
-  }, [currentChatId, createNewChat, clearFile, fetchMessages]);
+  }, [handleFileUpload]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -986,57 +914,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         <div className="chat-input-container p-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col gap-3">
-              {/* PDF Upload Section */}
-              {fileUpload.file && (
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <FileUp className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
-                    {fileUpload.file.name}
-                  </span>
-                  {fileUpload.uploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <Button size="sm" variant="ghost" onClick={clearFile} className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20">
-                        <Trash2 className="w-3 h-3 text-red-500" />
-                      </Button>
-                      <Button size="sm" onClick={handleFileSubmit} className="h-6 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white">
-                        Upload
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Main Input Section */}
+              {/* Main Input Section with integrated file preview */}
               <div className="flex items-end space-x-3">
-                {/* Auto-prompt Toggle */}
-                <div className="flex items-center space-x-2">
-                  <label className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
-                    <input
-                      type="checkbox"
-                      checked={autoPromptOnUpload}
-                      onChange={(e) => setAutoPromptOnUpload(e.target.checked)}
-                      className="w-3 h-3 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <span>Auto-prompt</span>
-                  </label>
-                  {autoPromptOnUpload && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newPrompt = prompt("Customize default prompt:", defaultPrompt);
-                        if (newPrompt && newPrompt.trim()) {
-                          setDefaultPrompt(newPrompt.trim());
-                        }
-                      }}
-                      className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline"
-                      title="Customize default prompt"
-                    >
-                      Customize
-                    </button>
-                  )}
-                </div>
 
                 {/* PDF Upload Button */}
                 <Button
@@ -1059,7 +938,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                   className="hidden"
                 />
 
-                {/* Chat Input */}
+                {/* Chat Input with File Preview */}
                 <div className="flex-1 relative">
                   <textarea
                     value={inputValue}
@@ -1072,7 +951,10 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                     }}
                     placeholder={currentChatId && currentChatId !== "temp" ? "Type your message..." : "Type your first message to start chatting..."}
                     disabled={chatState.loading || chatState.isTyping || isProcessing}
-                    className="chat-input-field"
+                    className={cn(
+                      "chat-input-field",
+                      fileUpload.file && "pb-16"
+                    )}
                     rows={1}
                     style={{
                       height: 'auto',
@@ -1084,12 +966,36 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                       target.style.height = Math.min(target.scrollHeight, 128) + 'px';
                     }}
                   />
+                  
+                  {/* File Preview inside input */}
+                  {fileUpload.file && (
+                    <div className="absolute bottom-2 left-3 right-3 flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <FileUp className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">
+                        {fileUpload.file.name}
+                      </span>
+                      {fileUpload.uploading ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-blue-600 flex-shrink-0" />
+                      ) : (
+                        <div className="flex items-center space-x-1">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={clearFile} 
+                            className="h-5 w-5 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 flex-shrink-0"
+                          >
+                            <Trash2 className="w-2.5 h-2.5 text-red-500" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Send Button */}
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || chatState.loading || chatState.isTyping || isProcessing}
+                  disabled={(!inputValue.trim() && !fileUpload.file) || chatState.loading || chatState.isTyping || isProcessing}
                   className="chat-send-button"
                 >
                   <Send className="w-4 h-4" />
@@ -1100,11 +1006,6 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
               <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
                 <div className="flex items-center space-x-4">
                   <span>{inputValue.length} characters</span>
-                  {autoPromptOnUpload && (
-                    <span className="text-purple-600 dark:text-purple-400">
-                      💡 Auto-prompt enabled
-                    </span>
-                  )}
                 </div>
                 <span>
                   {chatState.isTyping ? "AI is typing..." : 
