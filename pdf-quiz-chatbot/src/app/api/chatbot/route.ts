@@ -55,17 +55,35 @@ export const POST = async (req: Request) => {
 
     // Helper: is the user prompt about the PDF or document?
     function promptMentionsPDF(prompt: string) {
-      const pdfKeywords = ["pdf", "document", "file", "page", "section", "paragraph", "text above", "analyze this", "in the doc", "in the file", "in the document"];
+      const pdfKeywords = [
+        "pdf", "document", "file", "page", "section", "paragraph", 
+        "text above", "analyze this", "analyze", "summarize", "explain",
+        "what does it say", "what is in", "tell me about", "describe",
+        "in the doc", "in the file", "in the document", "from the document",
+        "this document", "the document", "the file", "the pdf"
+      ];
       return pdfKeywords.some(kw => prompt.toLowerCase().includes(kw));
     }
 
     let relevantContext = "";
-    if (chat?.pdfUrl && promptMentionsPDF(userMessage)) {
+    console.log('Chat PDF check:', { 
+      hasPdfUrl: !!chat?.pdfUrl, 
+      pdfUrl: chat?.pdfUrl,
+      promptMentionsPDF: promptMentionsPDF(userMessage),
+      userMessage 
+    });
+    
+    // Always try vector search if prompt mentions PDF, regardless of pdfUrl
+    // This handles cases where PDF was uploaded but pdfUrl might not be set yet
+    if (promptMentionsPDF(userMessage)) {
       const t0 = Date.now();
       console.log('Prompt is about PDF, performing vector search...');
       // Get more chunks for better context, especially for page-specific questions
       relevantContext = await getRelevantContext(userMessage, targetChatId, 3);
       console.log('Vector search took', Date.now() - t0, 'ms');
+      console.log('Relevant context found:', relevantContext ? 'Yes' : 'No', 'Length:', relevantContext.length);
+    } else {
+      console.log('Skipping vector search - prompt not PDF-related');
     }
 
     if (relevantContext && relevantContext.trim().length > 40) {

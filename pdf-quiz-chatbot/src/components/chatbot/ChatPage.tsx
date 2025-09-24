@@ -155,23 +155,10 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     // Mark that a message has been sent to hide prompt cards
     setMessageSent(true);
     
-    // If no chat ID exists, create one first
-    if (!currentChatId || currentChatId === "temp") {
-      try {
-        const newChatId = await createNewChat();
-        // Wait a bit for the chat to be created, then send the message
-        setTimeout(() => {
-          sendMessage(prompt);
-          setIsNewChat(false); // Exit welcome screen
-        }, 100);
-      } catch (error) {
-        console.error('Failed to create chat:', error);
-      }
-    } else {
-      sendMessage(prompt);
-      setIsNewChat(false); // Exit welcome screen
-    }
-  }, [sendMessage, currentChatId, createNewChat]);
+    // Just send the message - let the useChat hook handle chat creation
+    sendMessage(prompt);
+    setIsNewChat(false); // Exit welcome screen
+  }, [sendMessage]);
 
   // Unified send function: sends prompt and PDF together if PDF is selected
   const handleSendMessage = useCallback(async () => {
@@ -232,25 +219,13 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     }
 
 
-    if (!currentChatId || currentChatId === "temp") {
-      try {
-        const newChatId = await createNewChat();
-        // Redirect to the new chat
-        router.push(`/chatbot/${newChatId}`);
-        return;
-      } catch (error) {
-        setIsProcessing(false);
-        console.error('Failed to create chat:', error);
-        return;
-      }
-    }
-
+    // Send the message - let the useChat hook handle chat creation
     await sendMessage(inputValue);
     setOptimisticMessages([]); // Remove optimistic messages after backend fetch
     setIsProcessing(false);
     setInputValue("");
     setIsNewChat(false);
-  }, [inputValue, chatState.loading, sendMessage, currentChatId, createNewChat, fileUpload.file, clearFile, router]);
+  }, [inputValue, chatState.loading, sendMessage, fileUpload.file, clearFile]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
