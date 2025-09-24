@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { strict_output } from "@/lib/ai/gptforchatbot"; 
 import { prisma } from "@/lib/db/db";
 import { getRelevantContext } from "@/lib/ai/vectorSearch";
+import { getAuthSession } from "@/lib/auth/nextauth";
 
 export const POST = async (req: Request) => {
   try {
@@ -14,9 +15,29 @@ export const POST = async (req: Request) => {
 
     console.log('Chatbot API called with:', { userMessage, chatId });
 
+    // If no chatId provided, create a new chat first
+    let targetChatId = chatId;
+    if (!chatId || chatId === "temp") {
+      const session = await getAuthSession();
+      let userId = session?.user?.id;
+      
+      if (!userId) {
+        userId = "test-user-" + Date.now();
+      }
+
+      const newChat = await prisma.chat.create({
+        data: {
+          userId: userId,
+          name: "New Chat",
+          pdfUrl: null,
+        },
+      });
+      targetChatId = newChat.id;
+    }
+
     // Check if this chat has uploaded PDFs
     const chat = await prisma.chat.findUnique({
-      where: { id: chatId },
+      where: { id: targetChatId },
       include: {
         messages: {
           orderBy: { createdAt: "desc" },
@@ -43,7 +64,7 @@ export const POST = async (req: Request) => {
       const t0 = Date.now();
       console.log('Prompt is about PDF, performing vector search...');
       // Get more chunks for better context, especially for page-specific questions
-      relevantContext = await getRelevantContext(userMessage, chatId, 3);
+      relevantContext = await getRelevantContext(userMessage, targetChatId, 3);
       console.log('Vector search took', Date.now() - t0, 'ms');
     }
 
@@ -75,12 +96,29 @@ export const POST = async (req: Request) => {
     console.log('Bot response from strict_output:', botResponse);
     console.log('strict_output call took', Date.now() - t1, 'ms');
 
+    // Save user message and bot response to database
+    await prisma.message.createMany({
+      data: [
+        {
+          chatId: targetChatId,
+          content: userMessage,
+          sender: "user",
+        },
+        {
+          chatId: targetChatId,
+          content: botResponse,
+          sender: "bot",
+        },
+      ],
+    });
+
     // The strict_output function returns a string, so we wrap it in the expected format
     return NextResponse.json({ 
       response: botResponse,
       answer: botResponse, // Also include as answer for compatibility
       message: botResponse, // Also include as message for compatibility
       hasContext, // Indicate if RAG context was used
+      chatId: targetChatId, // Return the chatId (new or existing)
     }, { status: 200 });
   } catch (error) {
     console.error("Chatbot API Error:", error);

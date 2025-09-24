@@ -9,23 +9,8 @@ import { cn } from "@/lib/utils/utils";
 const ChatbotUI = () => {
   const router = useRouter();
 
-  const startNewChat = async () => {
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "New Chat" }),
-      });
-  
-      if (response.ok) {
-        const data = await response.json();
-        router.push(`/chatbot/${data.chatId}`);
-      } else {
-        console.error("Failed to create a new chat");
-      }
-    } catch (error) {
-      console.error("Error creating new chat:", error);
-    }
+  const startNewChat = () => {
+    router.push("/chatbot");
   };
 
   return (

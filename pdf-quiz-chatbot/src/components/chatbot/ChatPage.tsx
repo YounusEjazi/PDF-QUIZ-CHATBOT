@@ -30,9 +30,10 @@ import axios from "axios";
 
 type ChatPageProps = {
   chatId?: string;
+  showPromptCards?: boolean;
 };
 
-const ChatPage = ({ chatId }: ChatPageProps) => {
+const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
   const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -40,6 +41,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   const [creatingChat, setCreatingChat] = useState(false);
   const [isNewChat, setIsNewChat] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // for PDF+prompt
+  const [messageSent, setMessageSent] = useState(false); // Track if a message has been sent
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -150,6 +152,9 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     console.log('Prompt selected:', prompt);
     setInputValue(prompt);
     
+    // Mark that a message has been sent to hide prompt cards
+    setMessageSent(true);
+    
     // If no chat ID exists, create one first
     if (!currentChatId || currentChatId === "temp") {
       try {
@@ -171,6 +176,9 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
   // Unified send function: sends prompt and PDF together if PDF is selected
   const handleSendMessage = useCallback(async () => {
     if ((!inputValue.trim() && !fileUpload.file) || chatState.loading) return;
+
+    // Mark that a message has been sent to hide prompt cards
+    setMessageSent(true);
 
     // Always add optimistic user message first (for both prompt and PDF+prompt)
     const optimisticMsg = {
@@ -227,24 +235,22 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     if (!currentChatId || currentChatId === "temp") {
       try {
         const newChatId = await createNewChat();
-        setTimeout(async () => {
-          await sendMessage(inputValue);
-          setIsProcessing(false);
-          setInputValue("");
-          setIsNewChat(false);
-        }, 100);
+        // Redirect to the new chat
+        router.push(`/chatbot/${newChatId}`);
+        return;
       } catch (error) {
         setIsProcessing(false);
         console.error('Failed to create chat:', error);
+        return;
       }
-    } else {
-      await sendMessage(inputValue);
-      setOptimisticMessages([]); // Remove optimistic messages after backend fetch
-      setIsProcessing(false);
-      setInputValue("");
-      setIsNewChat(false);
     }
-  }, [inputValue, chatState.loading, sendMessage, currentChatId, createNewChat, fileUpload.file, clearFile]);
+
+    await sendMessage(inputValue);
+    setOptimisticMessages([]); // Remove optimistic messages after backend fetch
+    setIsProcessing(false);
+    setInputValue("");
+    setIsNewChat(false);
+  }, [inputValue, chatState.loading, sendMessage, currentChatId, createNewChat, fileUpload.file, clearFile, router]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -318,8 +324,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     );
   }
 
-  // Show welcome screen when no chat is selected and no chats exist, or when a new chat is created
-  if ((!currentChatId && chatsState.chats.length === 0 && !chatsState.loading) || (isNewChat && chatState.messages.length === 0)) {
+  // Show welcome screen when showPromptCards is true and no message has been sent, or when no chat is selected and no chats exist, or when a new chat is created
+  if ((showPromptCards && !messageSent) || (!currentChatId && chatsState.chats.length === 0 && !chatsState.loading) || (isNewChat && chatState.messages.length === 0)) {
     console.log('Showing welcome screen:', {
       currentChatId,
       chatsCount: chatsState.chats.length,

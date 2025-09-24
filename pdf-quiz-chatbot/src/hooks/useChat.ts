@@ -131,7 +131,8 @@ export const useChat = (chatId: string) => {
       return;
     }
 
-    if (!chatId || chatId === 'undefined' || chatId === 'temp') {
+    // Allow sending messages even with temp chatId - the API will create a new chat
+    if (!chatId || chatId === 'undefined') {
       console.error('No valid chatId provided for sendMessage:', chatId);
       toast.error('Please wait for chat to be created.');
       return;
@@ -156,13 +157,7 @@ export const useChat = (chatId: string) => {
     }));
 
     try {
-      // Save user message
-      console.log('Saving user message...');
-      await axios.post(`/api/chat/${chatId}/messages`, userMessage, {
-        signal: abortControllerRef.current?.signal,
-      });
-
-      // Get bot response
+      // Get bot response (this will create the chat if needed)
       console.log('Getting bot response...');
       const { data: botResponse } = await axios.post("/api/chatbot", {
         userMessage: content.trim(),
@@ -175,6 +170,7 @@ export const useChat = (chatId: string) => {
 
       // Handle the response format
       let formattedResponse = "I apologize, but I couldn't generate a response. Please try again.";
+      let returnedChatId = chatId; // Default to current chatId
       
       if (botResponse && typeof botResponse === 'object') {
         if (botResponse.response) {
@@ -185,6 +181,12 @@ export const useChat = (chatId: string) => {
           formattedResponse = botResponse.message;
         } else if (typeof botResponse === 'string') {
           formattedResponse = botResponse;
+        }
+        
+        // Check if a new chatId was returned
+        if (botResponse.chatId && botResponse.chatId !== chatId) {
+          returnedChatId = botResponse.chatId;
+          console.log('New chatId returned:', returnedChatId);
         }
       } else if (typeof botResponse === 'string') {
         formattedResponse = botResponse;
@@ -213,12 +215,6 @@ export const useChat = (chatId: string) => {
         content: formattedResponse,
         createdAt: new Date(),
       };
-
-      // Save bot message
-      console.log('Saving bot message...');
-      await axios.post(`/api/chat/${chatId}/messages`, botMessage, {
-        signal: abortControllerRef.current?.signal,
-      });
       
       setChatState(prev => ({
         ...prev,
@@ -227,6 +223,12 @@ export const useChat = (chatId: string) => {
         isTyping: false,
         retryCount: 0,
       }));
+
+      // If a new chatId was returned, redirect to it
+      if (returnedChatId !== chatId) {
+        console.log('Redirecting to new chat:', returnedChatId);
+        window.location.href = `/chatbot/${returnedChatId}`;
+      }
     } catch (error) {
       console.error('Error in sendMessage:', error);
       
