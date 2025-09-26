@@ -45,10 +45,34 @@ const Navbar = () => {
       <div className="fixed inset-x-0 top-0 bg-white dark:bg-gray-950 z-[10] h-fit border-b border-zinc-300">
         <div className="flex items-center justify-between gap-2 px-4 py-3 mx-auto w-full max-w-7xl">
           {/* Logo and Title */}
-          <Link href="/" className="flex items-center gap-2">
-            <p className="border-2 border-b-4 border-r-4 border-black dark:border-white px-2 py-0.5 text-base sm:text-lg font-bold rounded transition-all hover:-translate-y-[1px]">
-              PDF-Quiz-Chatbot
-            </p>
+          <Link href="/" className="flex items-center gap-3 group">
+            {/* Balanced Logo Icon */}
+            <div className="relative flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
+              {/* Chat Icon */}
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-white">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+              </svg>
+              
+              {/* PDF Badge */}
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">P</span>
+              </div>
+              
+              {/* Quiz Badge */}
+              <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">Q</span>
+              </div>
+            </div>
+            
+            {/* Logo Text */}
+            <div className="flex flex-col">
+              <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                PDF-Quiz-Chatbot
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 -mt-0.5 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-300">
+                AI Learning Assistant
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
