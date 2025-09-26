@@ -36,7 +36,7 @@ type ChatPageProps = {
 const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
   const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(chatId || null);
   const [creatingChat, setCreatingChat] = useState(false);
   const [isNewChat, setIsNewChat] = useState(false);
@@ -103,6 +103,24 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
       setIsNewChat(false);
     }
   }, [chatId, displayMessages.length, chatState.loading]);
+
+  // Handle sidebar state based on screen size - only on client side
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) { // lg breakpoint
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Listen for resize events
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const createNewChat = useCallback(async () => {
     try {

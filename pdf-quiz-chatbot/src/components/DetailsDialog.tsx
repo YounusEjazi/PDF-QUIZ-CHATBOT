@@ -38,7 +38,7 @@ const DetailsDialog = (props: Props) => {
             </DialogTitle>
           </div>
           
-          <DialogDescription className="space-y-8">
+          <div className="space-y-8">
             {/* Hero description */}
             <div className="relative p-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-white/30 dark:border-slate-700/30 rounded-xl shadow-lg">
               <div className="absolute top-2 right-2 w-8 h-8 text-purple-400/60 animate-pulse">
@@ -124,6 +124,11 @@ const DetailsDialog = (props: Props) => {
                 ))}
               </div>
             </div>
+          </div>
+          
+          {/* Hidden description for accessibility */}
+          <DialogDescription className="sr-only">
+            PDF Quiz Chatbot - AI-powered learning platform that transforms PDF documents into interactive quizzes and provides intelligent assistance for enhanced learning experience.
           </DialogDescription>
         </DialogHeader>
       </DialogContent>
