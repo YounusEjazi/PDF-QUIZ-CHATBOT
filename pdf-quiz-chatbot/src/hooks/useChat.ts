@@ -21,7 +21,7 @@ export type ChatState = {
 
 const MAX_RETRY_ATTEMPTS = 3;
 
-export const useChat = (chatId: string) => {
+export const useChat = (chatId: string, onNewChatId?: (newChatId: string) => void) => {
   const [chatState, setChatState] = useState<ChatState>({
     messages: [],
     loading: false,
@@ -224,10 +224,10 @@ export const useChat = (chatId: string) => {
         retryCount: 0,
       }));
 
-      // If a new chatId was returned, redirect to it
+      // If a new chatId was returned, notify the parent component
       if (returnedChatId !== chatId) {
-        console.log('Redirecting to new chat:', returnedChatId);
-        window.location.href = `/chatbot/${returnedChatId}`;
+        console.log('New chat created with ID:', returnedChatId);
+        onNewChatId?.(returnedChatId);
       }
     } catch (error) {
       console.error('Error in sendMessage:', error);

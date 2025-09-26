@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -50,9 +50,23 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
 
   // Always use the latest currentChatId for hooks
   const chatIdForHooks = currentChatId || "temp";
-  const { chatState, sendMessage, fetchMessages, retry } = useChat(chatIdForHooks);
+  const { chatState, sendMessage, fetchMessages, retry } = useChat(chatIdForHooks, (newChatId) => {
+    console.log('New chat ID received from useChat:', newChatId);
+    setCurrentChatId(newChatId);
+    router.push(`/chatbot/${newChatId}`);
+  });
   const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(chatIdForHooks);
   const { chatsState, createChat, deleteChat, updateChatName } = useChats();
+
+  // Combine chatState messages with optimistic messages for display
+  const displayMessages = useMemo(() => {
+    // If we have real messages from the chat state, use those
+    if (chatState.messages.length > 0) {
+      return chatState.messages;
+    }
+    // Otherwise, use optimistic messages (for new chats or when loading)
+    return optimisticMessages;
+  }, [optimisticMessages, chatState.messages]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,7 +74,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [chatState.messages, scrollToBottom]);
+  }, [displayMessages, scrollToBottom]);
 
   useEffect(() => {
     if (currentChatId && currentChatId !== "temp") {
@@ -69,23 +83,26 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     }
   }, [fetchMessages, currentChatId]);
 
-  // Reset isNewChat when navigating to an existing chat
+  // Handle initial chatId from URL parameter (when redirected from /chatbot/[id])
   useEffect(() => {
     if (chatId && chatId !== currentChatId) {
+      console.log('Setting chatId from URL parameter:', chatId);
+      setCurrentChatId(chatId);
       setIsNewChat(false);
+      setMessageSent(true); // Hide prompt cards instantly
     }
   }, [chatId, currentChatId]);
 
   // Detect if this is a new chat (no messages yet)
   useEffect(() => {
-    if (chatId && chatState.messages.length === 0 && !chatState.loading) {
+    if (chatId && displayMessages.length === 0 && !chatState.loading) {
       console.log('Detected new chat with no messages, showing welcome screen');
       setIsNewChat(true);
-    } else if (chatId && chatState.messages.length > 0) {
+    } else if (chatId && displayMessages.length > 0) {
       console.log('Chat has messages, hiding welcome screen');
       setIsNewChat(false);
     }
-  }, [chatId, chatState.messages.length, chatState.loading]);
+  }, [chatId, displayMessages.length, chatState.loading]);
 
   const createNewChat = useCallback(async () => {
     try {
@@ -114,15 +131,18 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
 
   const handleCreateNewChat = useCallback(async () => {
     try {
-      const newChatId = await createNewChat();
-      if (newChatId) {
-        // Don't redirect, let the component handle the state
-        console.log('New chat created with ID:', newChatId);
-      }
+      // Reset state for new chat
+      setCurrentChatId(null);
+      setMessageSent(false); // Show prompt cards
+      setOptimisticMessages([]);
+      setIsNewChat(true);
+      setInputValue(""); // Clear input
+      router.push('/chatbot'); // Go to main chatbot page
+      console.log('Starting new chat - reset state');
     } catch (error) {
-      console.error('Failed to create new chat:', error);
+      console.error('Failed to start new chat:', error);
     }
-  }, [createNewChat]);
+  }, [router]);
 
   const handleDeleteChat = useCallback(async (chatIdToDelete: string) => {
     try {
@@ -148,17 +168,16 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     setIsNewChat(false);
   }, []);
 
-  const handlePromptSelect = useCallback(async (prompt: string) => {
+  const handlePromptSelect = useCallback((prompt: string) => {
     console.log('Prompt selected:', prompt);
+    
+    // Only populate the input field with the selected prompt
     setInputValue(prompt);
     
-    // Mark that a message has been sent to hide prompt cards
-    setMessageSent(true);
-    
-    // Just send the message - let the useChat hook handle chat creation
-    sendMessage(prompt);
-    setIsNewChat(false); // Exit welcome screen
-  }, [sendMessage]);
+    // Don't send the message automatically - let user decide when to send
+    // Don't hide prompt cards - let user see them until they actually send
+    // Don't create chat until user actually sends the message
+  }, []);
 
   // Unified send function: sends prompt and PDF together if PDF is selected
   const handleSendMessage = useCallback(async () => {
@@ -223,7 +242,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     await sendMessage(inputValue);
     setOptimisticMessages([]); // Remove optimistic messages after backend fetch
     setIsProcessing(false);
-    setInputValue("");
+    // Don't clear input value - let user see what was sent and potentially modify it
     setIsNewChat(false);
   }, [inputValue, chatState.loading, sendMessage, fileUpload.file, clearFile]);
 
@@ -300,7 +319,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
   }
 
   // Show welcome screen when showPromptCards is true and no message has been sent, or when no chat is selected and no chats exist, or when a new chat is created
-  if ((showPromptCards && !messageSent) || (!currentChatId && chatsState.chats.length === 0 && !chatsState.loading) || (isNewChat && chatState.messages.length === 0)) {
+  if ((showPromptCards && !messageSent) || (!currentChatId && chatsState.chats.length === 0 && !chatsState.loading) || (isNewChat && displayMessages.length === 0)) {
     console.log('Showing welcome screen:', {
       currentChatId,
       chatsCount: chatsState.chats.length,
@@ -798,7 +817,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6 chat-messages">
-          {chatState.loading && chatState.messages.length === 0 && (
+          {chatState.loading && displayMessages.length === 0 && (
             <div className="flex items-center justify-center h-full">
               <div className="flex items-center space-x-2">
                 <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
@@ -807,17 +826,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
             </div>
           )}
 
-          {[
-            ...chatState.messages,
-            ...optimisticMessages.filter(
-              (optimistic) =>
-                !chatState.messages.some(
-                  (msg) =>
-                    msg.sender === optimistic.sender &&
-                    msg.content === optimistic.content
-                )
-            ),
-          ].map((message) => (
+          {displayMessages.map((message) => (
             <div
               key={message.id}
               className={cn(
