@@ -537,9 +537,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         <div className="chat-input-container p-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col gap-3">
-              {/* Main Input Section with integrated file preview */}
-              <div className="flex items-end space-x-3">
-                
+              {/* Elegant Input Section with integrated send button */}
+              <div className="relative">
                 {/* Hidden File Input */}
                 <input
                   ref={fileInputRef}
@@ -549,8 +548,8 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                   className="hidden"
                 />
 
-                {/* Chat Input with File Preview */}
-                <div className="flex-1 relative">
+                {/* Beautiful Input Container */}
+                <div className="relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-200 focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-300 dark:focus-within:border-purple-600">
                   <textarea
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
@@ -563,13 +562,16 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                     placeholder={currentChatId && currentChatId !== "temp" ? "Type your message..." : "Type your first message to start chatting..."}
                     disabled={chatState.loading || chatState.isTyping || isProcessing}
                     className={cn(
-                      "chat-input-field pl-10",
+                      "w-full bg-transparent border-0 resize-none focus:outline-none focus:ring-0",
+                      "px-4 py-3 pr-12 pl-12",
+                      "text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400",
+                      "rounded-2xl",
                       fileUpload.file && "pb-16"
                     )}
                     rows={1}
                     style={{
                       height: 'auto',
-                      minHeight: '44px'
+                      minHeight: '52px'
                     }}
                     onInput={(e) => {
                       const target = e.target as HTMLTextAreaElement;
@@ -578,16 +580,16 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                     }}
                   />
                   
-                  {/* Clipboard Icon for PDF Upload */}
+                  {/* PDF Upload Icon */}
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={fileUpload.uploading || isProcessing}
-                    className="absolute left-3 top-3 p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20"
                     title="Upload PDF"
                   >
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -602,39 +604,48 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                     </svg>
                   </button>
                   
+                  {/* Send Button - Integrated inside input */}
+                  <button
+                    type="button"
+                    onClick={handleSendMessage}
+                    disabled={(!inputValue.trim() && !fileUpload.file) || chatState.loading || chatState.isTyping || isProcessing}
+                    className={cn(
+                      "absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all duration-200",
+                      "flex items-center justify-center",
+                      (!inputValue.trim() && !fileUpload.file) || chatState.loading || chatState.isTyping || isProcessing
+                        ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                        : "text-white bg-purple-600 hover:bg-purple-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                    )}
+                    title="Send message"
+                  >
+                    {chatState.loading || chatState.isTyping || isProcessing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                  
                   {/* File Preview inside input */}
                   {fileUpload.file && (
-                    <div className="absolute bottom-2 left-3 right-3 flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                      <FileUp className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                      <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">
+                    <div className="absolute bottom-2 left-3 right-16 flex items-center space-x-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <FileUp className="w-3 h-3 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                      <span className="text-xs text-purple-700 dark:text-purple-300 truncate flex-1">
                         {fileUpload.file.name}
                       </span>
                       {fileUpload.uploading ? (
-                        <Loader2 className="w-3 h-3 animate-spin text-blue-600 flex-shrink-0" />
+                        <Loader2 className="w-3 h-3 animate-spin text-purple-600 dark:text-purple-400 flex-shrink-0" />
                       ) : (
-                        <div className="flex items-center space-x-1">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={clearFile} 
-                            className="h-5 w-5 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 flex-shrink-0"
-                          >
-                            <Trash2 className="w-2.5 h-2.5 text-red-500" />
-                          </Button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={clearFile}
+                          className="h-5 w-5 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 flex-shrink-0 rounded flex items-center justify-center transition-colors"
+                        >
+                          <Trash2 className="w-2.5 h-2.5 text-red-500" />
+                        </button>
                       )}
                     </div>
                   )}
                 </div>
-
-                {/* Send Button */}
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={(!inputValue.trim() && !fileUpload.file) || chatState.loading || chatState.isTyping || isProcessing}
-                  className="chat-send-button"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
               </div>
 
               {/* Character count and status */}
