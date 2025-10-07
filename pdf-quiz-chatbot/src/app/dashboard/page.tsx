@@ -9,7 +9,7 @@ import React from "react";
 import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import HotTopicsCard from "@/components/dashboard/HotTopicsCard";
+import PersonalInsightsCard from "@/components/dashboard/PersonalInsightsCard";
 import { Metadata } from "next";
 import { prisma } from "@/lib/db/db";
 
@@ -29,7 +29,49 @@ const Dashboard = async (props: Props) => {
     redirect("/");
   }
 
-  const topics = await prisma.topic_count.findMany({});
+  // Get user's personal data for insights
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      totalPoints: true,
+      quizzesTaken: true,
+      averageScore: true,
+      bestScore: true,
+      totalCorrect: true,
+      totalQuestions: true,
+      winStreak: true,
+      bestStreak: true,
+      studyTime: true,
+      level: true,
+      experience: true,
+    }
+  });
+
+  // Get user's recent quiz topics
+  const recentGames = await prisma.game.findMany({
+    where: { userId: session.user.id },
+    select: { topic: true },
+    orderBy: { timeStarted: 'desc' },
+    take: 5,
+    distinct: ['topic']
+  });
+
+  // Calculate improvement rate (mock calculation for now)
+  const improvementRate = user?.averageScore ? Math.min(20, user.averageScore * 0.1) : 0;
+
+  const personalInsights = {
+    totalQuizzes: user?.quizzesTaken || 0,
+    averageScore: user?.averageScore || 0,
+    bestScore: user?.bestScore || 0,
+    totalPoints: user?.totalPoints || 0,
+    winStreak: user?.winStreak || 0,
+    bestStreak: user?.bestStreak || 0,
+    studyTime: user?.studyTime || 0,
+    level: user?.level || 1,
+    experience: user?.experience || 0,
+    recentTopics: recentGames.map(game => game.topic),
+    improvementRate
+  };
 
   return (
     <main className="min-h-screen w-full relative overflow-hidden p-4 sm:p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -76,15 +118,15 @@ const Dashboard = async (props: Props) => {
 
         {/* Activity and Topics - Bottom Row */}
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="group relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-600 to-red-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative p-6 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl ">
-              <HotTopicsCard topics={topics} />
+          <div className="group relative h-[500px]">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative p-6 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl h-full">
+              <PersonalInsightsCard insights={personalInsights} />
             </div>
           </div>
-          <div className="group relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative p-6 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl ">
+          <div className="group relative h-[500px]">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative p-6 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl h-full">
               <RecentActivityCard />
             </div>
           </div>

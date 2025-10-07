@@ -9,22 +9,5 @@ services:
       - ./.env                 # Use .env file in the current directory
     volumes:
       - .:/app                 # Mount the current directory to /app inside the container
-      - ../docker:/docker      # Mount the docker folder from parent directory to /docker inside the container
+      - /app/node_modules      # Exclude node_modules from volume mount to preserve container's installed dependencies
     working_dir: /app
-    command: /docker/startup.sh  # Correct path to startup.sh script inside the container
-    # depends_on:
-    #   - db  # (Commented out) Ensures the app waits for the PostgreSQL database to be ready
-
-  # db:
-  #   image: postgres:13
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: younasejazi1
-  #     POSTGRES_DB: pqc
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"  # Map Postgres port to the host
-
-volumes:
-  postgres_data:  # Ensures persistent storage of the database
