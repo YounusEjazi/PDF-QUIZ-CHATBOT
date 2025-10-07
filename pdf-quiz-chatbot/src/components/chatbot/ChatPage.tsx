@@ -17,7 +17,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Menu
 } from "lucide-react";
 import { cn } from "@/lib/utils/utils";
 import { useChat } from "@/hooks/useChat";
@@ -30,18 +30,15 @@ import axios from "axios";
 
 type ChatPageProps = {
   chatId?: string;
-  showPromptCards?: boolean;
 };
 
-const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
+const ChatPage = ({ chatId }: ChatPageProps) => {
   const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Start open on desktop
   const [currentChatId, setCurrentChatId] = useState<string | null>(chatId || null);
   const [creatingChat, setCreatingChat] = useState(false);
-  const [isNewChat, setIsNewChat] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // for PDF+prompt
-  const [messageSent, setMessageSent] = useState(false); // Track if a message has been sent
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -88,8 +85,6 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     if (chatId && chatId !== currentChatId) {
       console.log('Setting chatId from URL parameter:', chatId);
       setCurrentChatId(chatId);
-      setIsNewChat(false);
-      setMessageSent(true); // Hide prompt cards instantly
     }
   }, [chatId, currentChatId]);
 
@@ -97,10 +92,8 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
   useEffect(() => {
     if (chatId && displayMessages.length === 0 && !chatState.loading) {
       console.log('Detected new chat with no messages, showing welcome screen');
-      setIsNewChat(true);
     } else if (chatId && displayMessages.length > 0) {
       console.log('Chat has messages, hiding welcome screen');
-      setIsNewChat(false);
     }
   }, [chatId, displayMessages.length, chatState.loading]);
 
@@ -134,8 +127,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
         console.log('Created new chat with ID:', newChatId);
         setCurrentChatId(newChatId);
         setCreatingChat(false);
-        setIsNewChat(true);
-        console.log('Set isNewChat to true');
+        console.log('Created new chat');
         return newChatId;
       } else {
         throw new Error('Invalid response format');
@@ -151,9 +143,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     try {
       // Reset state for new chat
       setCurrentChatId(null);
-      setMessageSent(false); // Show prompt cards
       setOptimisticMessages([]);
-      setIsNewChat(true);
       setInputValue(""); // Clear input
       router.push('/chatbot'); // Go to main chatbot page
       console.log('Starting new chat - reset state');
@@ -182,27 +172,12 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     }
   }, [updateChatName]);
 
-  const handleStartChat = useCallback(() => {
-    setIsNewChat(false);
-  }, []);
-
-  const handlePromptSelect = useCallback((prompt: string) => {
-    console.log('Prompt selected:', prompt);
-    
-    // Only populate the input field with the selected prompt
-    setInputValue(prompt);
-    
-    // Don't send the message automatically - let user decide when to send
-    // Don't hide prompt cards - let user see them until they actually send
-    // Don't create chat until user actually sends the message
-  }, []);
 
   // Unified send function: sends prompt and PDF together if PDF is selected
   const handleSendMessage = useCallback(async () => {
     if ((!inputValue.trim() && !fileUpload.file) || chatState.loading) return;
 
     // Mark that a message has been sent to hide prompt cards
-    setMessageSent(true);
 
     // Always add optimistic user message first (for both prompt and PDF+prompt)
     const optimisticMsg = {
@@ -247,7 +222,6 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
         setOptimisticMessages([]); // Remove optimistic messages after backend fetch
         clearFile();
         setInputValue("");
-        setIsNewChat(false);
         setIsProcessing(false);
       } catch (error) {
         console.error("Failed to send prompt and PDF:", error);
@@ -261,7 +235,6 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     setOptimisticMessages([]); // Remove optimistic messages after backend fetch
     setIsProcessing(false);
     // Don't clear input value - let user see what was sent and potentially modify it
-    setIsNewChat(false);
   }, [inputValue, chatState.loading, sendMessage, fileUpload.file, clearFile]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -336,399 +309,22 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
     );
   }
 
-  // Show welcome screen when showPromptCards is true and no message has been sent, or when no chat is selected and no chats exist, or when a new chat is created
-  if ((showPromptCards && !messageSent) || (!currentChatId && chatsState.chats.length === 0 && !chatsState.loading) || (isNewChat && displayMessages.length === 0)) {
-    console.log('Showing welcome screen:', {
-      currentChatId,
-      chatsCount: chatsState.chats.length,
-      loading: chatsState.loading,
-      isNewChat,
-      messagesCount: chatState.messages.length
-    });
-    if (isNewChat) {
-      return (
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-          {/* Sidebar - Always show actual chat list */}
-          <div className={cn(
-            "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
-            "lg:translate-x-0", // Always visible on desktop
-            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hidden on mobile when closed, but always visible on desktop
-          )}>
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    AI Chat
-                  </h1>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCreateNewChat}
-                      className="text-purple-600 hover:text-purple-700"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSidebarOpen(false)}
-                      className="lg:hidden" // Only show on mobile
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat List */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {chatsState.loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                  </div>
-                ) : chatsState.error ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                    <p className="text-sm text-red-600 dark:text-red-400">{chatsState.error}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {chatsState.chats.map((chat) => (
-                      <ChatListItem
-                        key={chat.id}
-                        chat={chat}
-                        isActive={chat.id === currentChatId}
-                        onSelect={(chatId) => router.push(`/chatbot/${chatId}`)}
-                        onDelete={handleDeleteChat}
-                        onUpdateName={handleUpdateChatName}
-                        formatDate={formatDate}
-                      />
-                    ))}
-                    
-                    {chatsState.chats.length === 0 && (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No chats yet</p>
-                        <p className="text-xs">Start a conversation to see your chats here</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Welcome Screen */}
-          <div className="flex-1 flex flex-col">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSidebarOpen(true)}
-                    className="lg:hidden"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Welcome to AI Chat
-                  </h2>
-                </div>
-              </div>
-            </div>
-
-            {/* Welcome Content */}
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="max-w-2xl text-center space-y-8">
-                <div className="space-y-4">
-                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto">
-                    <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    Start Your Conversation
-                  </h1>
-                  <p className="text-lg text-gray-600 dark:text-gray-400">
-                    Begin chatting with our AI assistant to explore topics, get explanations, or find answers to your questions.
-                  </p>
-                </div>
-
-                {/* Quick Start Prompts */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                  <Button
-                    onClick={() => handlePromptSelect("Hello! Can you help me with a question?")}
-                    variant="outline"
-                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                  >
-                    <MessageSquare className="w-5 h-5 text-purple-600" />
-                    <span className="text-sm font-medium">Start a conversation</span>
-                  </Button>
-                  
-                  <Button
-                    onClick={() => handlePromptSelect("I need help understanding a topic. Can you explain it to me?")}
-                    variant="outline"
-                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                  >
-                    <Bot className="w-5 h-5 text-purple-600" />
-                    <span className="text-sm font-medium">Ask for help</span>
-                  </Button>
-                  
-                  <Button
-                    onClick={() => handlePromptSelect("Can you help me analyze a document or text?")}
-                    variant="outline"
-                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                  >
-                    <FileUp className="w-5 h-5 text-purple-600" />
-                    <span className="text-sm font-medium">Analyze documents</span>
-                  </Button>
-                  
-                  <Button
-                    onClick={() => handlePromptSelect("I'd like to learn something new. What can you teach me?")}
-                    variant="outline"
-                    className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                  >
-                    <Sparkles className="w-5 h-5 text-purple-600" />
-                    <span className="text-sm font-medium">Learn something new</span>
-                  </Button>
-                </div>
-
-                {/* Start Chat Button */}
-                <div className="mt-6">
-                  <Button
-                    onClick={handleStartChat}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
-                  >
-                    Start Chat
-                  </Button>
-                </div>
-
-                {/* Or start with custom message */}
-                <div className="mt-8">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Or type your own message to get started:
-                  </p>
-                  <div className="flex items-center space-x-3 max-w-md mx-auto">
-                    <Input
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Type your message..."
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!inputValue.trim()}
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
 
     return (
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Sidebar - Always visible on desktop, hidden on mobile when closed */}
-        <div className={cn(
-          "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
-          "lg:translate-x-0", // Always visible on desktop
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hidden on mobile when closed, but always visible on desktop
-        )}>
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  AI Chat
-                </h1>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCreateNewChat}
-                    className="text-purple-600 hover:text-purple-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+    <div className="flex h-screen chat-container min-w-0">
+      {/* Backdrop overlay - when sidebar is open */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
                     onClick={() => setSidebarOpen(false)}
-                    className="lg:hidden" // Only show on mobile
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Chat List */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {chatsState.loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                </div>
-              ) : chatsState.error ? (
-                <div className="text-center py-8">
-                  <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                  <p className="text-sm text-red-600 dark:text-red-400">{chatsState.error}</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {chatsState.chats.map((chat) => (
-                    <ChatListItem
-                      key={chat.id}
-                      chat={chat}
-                      isActive={chat.id === currentChatId}
-                      onSelect={(chatId) => router.push(`/chatbot/${chatId}`)}
-                      onDelete={handleDeleteChat}
-                      onUpdateName={handleUpdateChatName}
-                      formatDate={formatDate}
-                    />
-                  ))}
-                  
-                  {chatsState.chats.length === 0 && (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No chats yet</p>
-                      <p className="text-xs">Start a conversation to see your chats here</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Welcome Screen */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Welcome to AI Chat
-                </h2>
-              </div>
-            </div>
-          </div>
-
-          {/* Welcome Content */}
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="max-w-2xl text-center space-y-8">
-              <div className="space-y-4">
-                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto">
-                  <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  Start Your Conversation
-                </h1>
-                <p className="text-lg text-gray-600 dark:text-gray-400">
-                  Begin chatting with our AI assistant to explore topics, get explanations, or find answers to your questions.
-                </p>
-              </div>
-
-              {/* Quick Start Prompts */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                <Button
-                  onClick={() => handlePromptSelect("Hello! Can you help me with a question?")}
-                  variant="outline"
-                  className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                >
-                  <MessageSquare className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm font-medium">Start a conversation</span>
-                </Button>
-                
-                <Button
-                  onClick={() => handlePromptSelect("I need help understanding a topic. Can you explain it to me?")}
-                  variant="outline"
-                  className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                >
-                  <Bot className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm font-medium">Ask for help</span>
-                </Button>
-                
-                <Button
-                  onClick={() => handlePromptSelect("Can you help me analyze a document or text?")}
-                  variant="outline"
-                  className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                >
-                  <FileUp className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm font-medium">Analyze documents</span>
-                </Button>
-                
-                <Button
-                  onClick={() => handlePromptSelect("I'd like to learn something new. What can you teach me?")}
-                  variant="outline"
-                  className="h-20 flex flex-col items-center justify-center space-y-2 text-left"
-                >
-                  <Sparkles className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm font-medium">Learn something new</span>
-                </Button>
-              </div>
-
-              {/* Start Chat Button */}
-              <div className="mt-6">
-                <Button
-                  onClick={handleStartChat}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
-                >
-                  Start Chat
-                </Button>
-              </div>
-
-              {/* Or start with custom message */}
-              <div className="mt-8">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Or type your own message to get started:
-                </p>
-                <div className="flex items-center space-x-3 max-w-md mx-auto">
-                  <Input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your message..."
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!inputValue.trim()}
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-screen chat-container">
-      {/* Sidebar - Always visible on desktop, hidden on mobile when closed */}
+        />
+      )}
+      
+      {/* Sidebar - Collapsible on both mobile and desktop */}
       <div className={cn(
-        "w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
-        "lg:translate-x-0", // Always visible on desktop
-        sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0" // Hidden on mobile when closed, but always visible on desktop
+        "w-80 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
+        "fixed z-50", // Always fixed positioning so it doesn't take up layout space
+        sidebarOpen ? "translate-x-0" : "-translate-x-full" // Hidden when closed
       )}>
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -750,7 +346,6 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setSidebarOpen(false)}
-                  className="lg:hidden" // Only show on mobile
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -797,7 +392,7 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between">
@@ -806,9 +401,8 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden"
               >
-                <ChevronRight className="w-4 h-4" />
+                <Menu className="w-4 h-4" />
               </Button>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Chat
@@ -840,6 +434,33 @@ const ChatPage = ({ chatId, showPromptCards = false }: ChatPageProps) => {
               <div className="flex items-center space-x-2">
                 <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                 <span className="text-gray-600 dark:text-gray-400">Loading chat...</span>
+              </div>
+            </div>
+          )}
+
+          {/* Home screen message when no chat is selected */}
+          {!currentChatId && displayMessages.length === 0 && !chatState.loading && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-md mx-auto">
+                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  What's on the agenda today?
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Start a new conversation or select an existing chat from the sidebar to begin.
+                </p>
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden"
+                  >
+                    <Menu className="w-4 h-4 mr-2" />
+                    Browse Chats
+                  </Button>
+                </div>
               </div>
             </div>
           )}
