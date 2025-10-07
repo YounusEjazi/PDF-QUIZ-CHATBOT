@@ -1,15 +1,15 @@
 services:
   app:
     build:
-      context: .               # Build from the root directory (to include all files)
-      dockerfile: Dockerfile    # Use the Dockerfile at the root of the project
+      context: .               # Build from the pdf-quiz-chatbot directory
+      dockerfile: Dockerfile   # Use the Dockerfile in the current directory
     ports:
       - "3000:3000"            # Map container port 3000 to local port 3000
     env_file:
-      - ./pdf-quiz-chatbot/.env
+      - ./.env                 # Use .env file in the current directory
     volumes:
-      - ./pdf-quiz-chatbot:/app  # Mount the pdf-quiz-chatbot folder to /app inside the container
-      - ./docker:/docker         # Mount the docker folder to /docker inside the container
+      - .:/app                 # Mount the current directory to /app inside the container
+      - ../docker:/docker      # Mount the docker folder from parent directory to /docker inside the container
     working_dir: /app
     command: /docker/startup.sh  # Correct path to startup.sh script inside the container
     # depends_on:
