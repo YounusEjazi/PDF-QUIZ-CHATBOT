@@ -27,8 +27,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Game = {
   id: string;
-  topic: string;
-  score: number | null;
+  topic?: string; // Optional - not sent from API for privacy
+  score?: number | null; // Optional - not sent from API for privacy
   timeStarted: string;
   timeEnded: string | null;
 };
@@ -194,12 +194,12 @@ export function UserDetailsDialog({
 
           {activeTab === 'games' && (
             <div className="space-y-4">
-              {user.games.map((game) => (
+              {user.games.map((game, index) => (
                 <Card key={game.id} className="bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-800/70 transition-colors">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start gap-4">
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-medium truncate text-base">{game.topic}</h4>
+                        <h4 className="font-medium truncate text-base">Quiz #{user.games.length - index}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                           <p className="text-xs text-muted-foreground">
@@ -208,14 +208,9 @@ export function UserDetailsDialog({
                         </div>
                       </div>
                       <div className="text-right flex flex-col items-end">
-                        <div className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
-                          {game.score ? `${game.score.toFixed(2)}%` : 'Incomplete'}
+                        <div className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
+                          {game.timeEnded ? 'Completed' : 'In Progress'}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {game.timeEnded ? 
-                            `${Math.round((new Date(game.timeEnded).getTime() - new Date(game.timeStarted).getTime()) / 60000)}min` 
-                            : 'In Progress'}
-                        </p>
                       </div>
                     </div>
                   </CardContent>

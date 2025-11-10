@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,29 @@ import Link from "next/link";
 import Image from "next/image";
 
 type Props = {};
+
+const TechIcon = ({ tech }: { tech: { name: string; image: string; size: number } }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  if (imageError) {
+    return (
+      <div className="w-full h-full rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+        {tech.name.charAt(0)}
+      </div>
+    );
+  }
+  
+  return (
+    <Image
+      alt={tech.name.toLowerCase()}
+      src={tech.image}
+      width={tech.size}
+      height={tech.size}
+      className="object-contain w-4 h-4 sm:w-6 sm:h-6"
+      onError={() => setImageError(true)}
+    />
+  );
+};
 
 const DetailsDialog = (props: Props) => {
   return (
@@ -95,7 +118,6 @@ const DetailsDialog = (props: Props) => {
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 md:p-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm rounded-xl border border-white/30 dark:border-slate-700/30">
                 {[
-                  { name: "Planet Scale", image: "/planetscale.png", size: 32 },
                   { name: "Next.js", image: "/nextjs.png", size: 32 },
                   { name: "Tailwind", image: "/tailwind.png", size: 32 },
                   { name: "NextAuth", image: "/nextauth.png", size: 28 },
@@ -103,19 +125,15 @@ const DetailsDialog = (props: Props) => {
                   { name: "React Query", image: "/react-query.png", size: 28 },
                   { name: "Prisma", image: "/prisma.png", size: 28 },
                   { name: "TypeScript", image: "/typescript.png", size: 28 },
+                  { name: "Pinecone", image: "/pinecone.png", size: 28 },
+                  { name: "LangChain", image: "/langchain.svg", size: 28 },
                 ].map((tech, index) => (
                   <div
                     key={tech.name}
                     className="group flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-white/50 dark:border-slate-700/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/10 hover:border-purple-300/50 dark:hover:border-purple-600/50"
                   >
                     <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-700 p-1 sm:p-1.5 shadow-sm group-hover:shadow-md transition-shadow">
-                      <Image
-                        alt={tech.name.toLowerCase()}
-                        src={tech.image}
-                        width={tech.size}
-                        height={tech.size}
-                        className="object-contain w-4 h-4 sm:w-6 sm:h-6"
-                      />
+                      <TechIcon tech={tech} />
                     </div>
                     <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-colors">
                       {tech.name}

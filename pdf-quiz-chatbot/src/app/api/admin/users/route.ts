@@ -31,8 +31,8 @@ export async function GET() {
         games: {
           select: {
             id: true,
-            topic: true,
-            score: true,
+            // topic: true, // Removed for privacy - admins shouldn't see user quiz topics
+            // score: true, // Removed for privacy - admins shouldn't see user quiz scores
             timeStarted: true,
             timeEnded: true,
           },
