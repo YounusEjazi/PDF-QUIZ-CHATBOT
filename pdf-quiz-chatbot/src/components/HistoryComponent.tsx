@@ -3,6 +3,7 @@ import { Clock, CopyCheck, Edit2, Trophy } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import DeleteQuizButton from "@/components/DeleteQuizButton";
 
 type Props = {
   limit: number;
@@ -65,14 +66,17 @@ const HistoryComponent = async ({ limit, userId, showScrollArea = true }: Props)
                 </div>
               </div>
               
-              {game.score !== null && (
-                <div className="flex items-center space-x-2 sm:shrink-0">
-                  <Trophy className={`w-5 h-5 ${scoreColor}`} />
-                  <span className={`text-lg font-bold ${scoreColor}`}>
-                    {Math.round(game.score)}%
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 sm:shrink-0">
+                {game.score !== null && (
+                  <div className="flex items-center space-x-2">
+                    <Trophy className={`w-5 h-5 ${scoreColor}`} />
+                    <span className={`text-lg font-bold ${scoreColor}`}>
+                      {Math.round(game.score)}%
+                    </span>
+                  </div>
+                )}
+                <DeleteQuizButton gameId={game.id} gameTopic={game.topic} />
+              </div>
             </div>
           </div>
         );
