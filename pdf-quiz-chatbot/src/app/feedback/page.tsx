@@ -111,6 +111,21 @@ export default function FeedbackPage() {
           </p>
         </div>
 
+        {/* Google Forms Alternative */}
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-center">
+          <p className="text-gray-700 dark:text-gray-300 mb-3">
+            Alternativ kannst du uns auch über Google anonym Feedback geben:
+          </p>
+          <a
+            href="https://docs.google.com/forms/d/e/1FAIpQLSenyCrRsKyemnBSp43z2BVWMFMhI_juRI0BKkxkT5z5JsHuvA/viewform"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline font-medium transition-colors"
+          >
+            👉 Zum Google-Feedback-Formular
+          </a>
+        </div>
+
         {/* Feedback Form Card */}
         <Card className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
           <CardHeader className="space-y-1 border-b border-gray-200 dark:border-gray-700">

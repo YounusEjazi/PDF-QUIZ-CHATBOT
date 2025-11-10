@@ -6,7 +6,7 @@ import RecentActivityCard from "@/components/dashboard/RecentActivityCard";
 import { getAuthSession } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import React from "react";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, User, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import PersonalInsightsCard from "@/components/dashboard/PersonalInsightsCard";
@@ -86,6 +86,12 @@ const Dashboard = async (props: Props) => {
           Dashboard
         </h1>
         <div className="flex items-center gap-4">
+          <Link href="/feedback">
+            <span className="group relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white transition-all rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] border border-blue-500/30">
+              <MessageSquare className="w-4 h-4 group-hover:rotate-12 transition-transform duration-200" />
+              Feedback
+            </span>
+          </Link>
           <DetailsDialog />
         </div>
       </nav>
