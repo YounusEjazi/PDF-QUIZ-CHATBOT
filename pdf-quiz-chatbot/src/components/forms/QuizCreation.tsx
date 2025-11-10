@@ -297,7 +297,7 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
                     form.getValues("type") === "open_ended" ? "text-white" : "text-gray-600 dark:text-gray-400"
                   )} />
                   <span className={form.getValues("type") === "open_ended" ? "text-white" : ""}>
-                    Open Ended
+                    Fill in the Blank
                   </span>
                 </Button>
               </div>

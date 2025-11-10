@@ -60,7 +60,7 @@ const HistoryComponent = async ({ limit, userId, showScrollArea = true }: Props)
                     </span>
                     <span className="hidden sm:inline">•</span>
                     <span>
-                      {game.gameType === "mcq" ? "Multiple Choice" : "Open-Ended"}
+                      {game.gameType === "mcq" ? "Multiple Choice" : "Fill in the Blank"}
                     </span>
                   </div>
                 </div>
