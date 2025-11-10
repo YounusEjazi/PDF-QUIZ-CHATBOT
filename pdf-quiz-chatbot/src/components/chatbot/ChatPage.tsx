@@ -17,7 +17,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Menu
+  Menu,
+  LayoutDashboard
 } from "lucide-react";
 import { cn } from "@/lib/utils/utils";
 import { useChat } from "@/hooks/useChat";
@@ -481,21 +482,34 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
               </h2>
             </div>
             
-            {/* Error Banner */}
-            {chatState.error && (
-              <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm">{chatState.error}</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={retry}
-                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                >
-                  Retry
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Error Banner */}
+              {chatState.error && (
+                <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">{chatState.error}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={retry}
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+              
+              {/* Return to Dashboard Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center gap-2"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Button>
+            </div>
           </div>
         </div>
 
