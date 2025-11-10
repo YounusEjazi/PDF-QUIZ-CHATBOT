@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import axios from "axios";
 import { useTheme } from "next-themes";
-import { ArrowLeft, Mail, Lock, User } from "lucide-react";
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import {
   Card,
@@ -30,6 +31,7 @@ const AuthPage = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { theme } = useTheme();
 
@@ -58,8 +60,24 @@ const AuthPage = () => {
           router.push("/dashboard");
         }
       } else {
+        // Validate password length
+        if (formData.password.length < 8) {
+          setError("Password must be at least 8 characters long.");
+          setIsLoading(false);
+          return;
+        }
+
         await axios.post("/api/register", formData);
+        toast.success("Authentication successful!", {
+          description: "Your account has been created successfully.",
+          duration: 3000,
+        });
+        // Keep email and password for sign-in, only clear name
+        const email = formData.email;
+        const password = formData.password;
         setIsSignIn(true);
+        // Pre-fill email and password for sign-in
+        setFormData({ name: "", email: email, password: password });
       }
     } catch (err: any) {
       setError(err.response?.data?.error || "Something went wrong.");
@@ -181,17 +199,36 @@ const AuthPage = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                   <Input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     id="password"
                     name="password"
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    className="pl-10"
+                    minLength={8}
+                    className="pl-10 pr-10"
                     disabled={isLoading}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    disabled={isLoading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
+                {!isSignIn && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Password must be at least 8 characters long
+                  </p>
+                )}
               </div>
               <Button
                 type="submit"
@@ -215,7 +252,10 @@ const AuthPage = () => {
                 <>
                   Don&apos;t have an account?{" "}
                   <button
-                    onClick={() => setIsSignIn(false)}
+                    onClick={() => {
+                      setIsSignIn(false);
+                      setShowPassword(false);
+                    }}
                     className="text-purple-600 dark:text-purple-400 hover:underline font-medium"
                     disabled={isLoading}
                   >
@@ -226,7 +266,10 @@ const AuthPage = () => {
                 <>
                   Already have an account?{" "}
                   <button
-                    onClick={() => setIsSignIn(true)}
+                    onClick={() => {
+                      setIsSignIn(true);
+                      setShowPassword(false);
+                    }}
                     className="text-purple-600 dark:text-purple-400 hover:underline font-medium"
                     disabled={isLoading}
                   >

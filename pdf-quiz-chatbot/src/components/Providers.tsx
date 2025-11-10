@@ -8,6 +8,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 const queryClient = new QueryClient();
 
 const Providers = ({ children }: ThemeProviderProps) => {
@@ -28,6 +29,7 @@ const Providers = ({ children }: ThemeProviderProps) => {
         <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>
           <SessionProvider>{children}</SessionProvider>
         </div>
+        <Toaster position="top-center" richColors />
       </NextThemesProvider>
     </QueryClientProvider>
   );
