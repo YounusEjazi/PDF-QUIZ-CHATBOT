@@ -41,9 +41,9 @@ const DetailsDialog = (props: Props) => {
   return (
     <Dialog>
       <DialogTrigger>
-        <span className="group relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white transition-all rounded-xl bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 hover:shadow-lg hover:shadow-slate-500/25 hover:scale-[1.02] active:scale-[0.98] border border-slate-600/30">
-          <HelpCircle className="w-4 h-4 group-hover:rotate-12 transition-transform duration-200" />
-          What is this
+        <span className="group relative inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm font-medium text-white transition-all rounded-lg sm:rounded-xl bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 hover:shadow-lg hover:shadow-slate-500/25 hover:scale-[1.02] active:scale-[0.98] border border-slate-600/30">
+          <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:rotate-12 transition-transform duration-200" />
+          <span className="hidden sm:inline">What is this</span>
         </span>
       </DialogTrigger>
       <DialogContent className="w-[95vw] max-w-4xl md:w-[90vw] max-h-[90vh] p-0 gap-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 backdrop-blur-xl border border-white/20 dark:border-slate-700/20 rounded-2xl shadow-2xl overflow-hidden">

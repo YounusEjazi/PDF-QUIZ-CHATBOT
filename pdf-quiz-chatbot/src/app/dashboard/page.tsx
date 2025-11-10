@@ -85,11 +85,11 @@ const Dashboard = async (props: Props) => {
         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-purple-800 to-slate-900 dark:from-slate-100 dark:via-purple-200 dark:to-slate-100">
           Dashboard
         </h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link href="/feedback">
-            <span className="group relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white transition-all rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] border border-blue-500/30">
-              <MessageSquare className="w-4 h-4 group-hover:rotate-12 transition-transform duration-200" />
-              Feedback
+            <span className="group relative inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm font-medium text-white transition-all rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] border border-blue-500/30">
+              <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:rotate-12 transition-transform duration-200" />
+              <span className="hidden sm:inline">Feedback</span>
             </span>
           </Link>
           <DetailsDialog />
