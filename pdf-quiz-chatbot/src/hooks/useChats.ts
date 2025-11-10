@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'sonner';
+import { useAuthErrorHandler } from './useAuthErrorHandler';
 
 export type Chat = {
   id: string;
@@ -22,6 +23,8 @@ export const useChats = () => {
     loading: false,
     error: null,
   });
+
+  const { handleAuthError } = useAuthErrorHandler();
 
   const fetchChats = useCallback(async () => {
     try {
@@ -50,13 +53,22 @@ export const useChats = () => {
       }
     } catch (error) {
       console.error('Error fetching chats:', error);
+      
+      // Check for authentication error first
+      if (handleAuthError(error, "Sie sind nicht eingeloggt. Bitte melden Sie sich an, um Ihre Chats anzuzeigen.")) {
+        setChatsState({
+          chats: [],
+          loading: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+      
       let errorMessage = 'Failed to load chats';
       
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
-        if (axiosError.response?.status === 401) {
-          errorMessage = 'Please log in to view your chats';
-        } else if (axiosError.response?.data && typeof axiosError.response.data === 'object' && 'error' in axiosError.response.data) {
+        if (axiosError.response?.data && typeof axiosError.response.data === 'object' && 'error' in axiosError.response.data) {
           errorMessage = (axiosError.response.data as { error: string }).error;
         }
       }
@@ -67,7 +79,7 @@ export const useChats = () => {
         error: errorMessage,
       });
     }
-  }, []);
+  }, [handleAuthError]);
 
   const createChat = useCallback(async (name: string = "New Chat") => {
     try {
@@ -95,6 +107,12 @@ export const useChats = () => {
       }
     } catch (error) {
       console.error('Error creating chat:', error);
+      
+      // Check for authentication error first
+      if (handleAuthError(error)) {
+        throw error;
+      }
+      
       let errorMessage = 'Failed to create chat';
       
       if (axios.isAxiosError(error)) {
@@ -107,7 +125,7 @@ export const useChats = () => {
       toast.error(errorMessage);
       throw error;
     }
-  }, []);
+  }, [handleAuthError]);
 
   const deleteChat = useCallback(async (chatId: string) => {
     try {
@@ -122,6 +140,12 @@ export const useChats = () => {
       toast.success('Chat deleted');
     } catch (error) {
       console.error('Error deleting chat:', error);
+      
+      // Check for authentication error first
+      if (handleAuthError(error)) {
+        throw error;
+      }
+      
       let errorMessage = 'Failed to delete chat';
       
       if (axios.isAxiosError(error)) {
@@ -136,7 +160,7 @@ export const useChats = () => {
       toast.error(errorMessage);
       throw error;
     }
-  }, []);
+  }, [handleAuthError]);
 
   const updateChatName = useCallback(async (chatId: string, name: string) => {
     try {
@@ -156,7 +180,7 @@ export const useChats = () => {
       toast.error('Failed to update chat name');
       throw error;
     }
-  }, []);
+  }, [handleAuthError]);
 
   // Fetch chats on mount
   useEffect(() => {
