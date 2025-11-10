@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'sonner';
+import { useAuthErrorHandler } from './useAuthErrorHandler';
 
 export type Message = { 
   id: string; 
@@ -32,17 +33,22 @@ export const useChat = (chatId: string, onNewChatId?: (newChatId: string) => voi
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { handleAuthError } = useAuthErrorHandler();
 
   const handleApiError = useCallback((error: unknown, operation: string) => {
     console.error(`Error in ${operation}:`, error);
+    
+    // Check for authentication error first
+    if (handleAuthError(error)) {
+      setChatState(prev => ({ ...prev, error: "Authentication required" }));
+      return;
+    }
     
     let errorMessage = "An unexpected error occurred. Please try again.";
     
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
-      if (axiosError.response?.status === 401) {
-        errorMessage = "Please log in to continue.";
-      } else if (axiosError.response?.status === 429) {
+      if (axiosError.response?.status === 429) {
         errorMessage = "Too many requests. Please wait a moment and try again.";
       } else if (axiosError.response?.status === 413) {
         errorMessage = "File is too large. Please upload a smaller file.";
@@ -58,7 +64,7 @@ export const useChat = (chatId: string, onNewChatId?: (newChatId: string) => voi
     console.error(`API Error in ${operation}:`, errorMessage);
     toast.error(errorMessage);
     setChatState(prev => ({ ...prev, error: errorMessage }));
-  }, []);
+  }, [handleAuthError]);
 
   const fetchMessages = useCallback(async (retryCount = 0) => {
     if (!chatId || chatId === 'undefined' || chatId === 'temp') {

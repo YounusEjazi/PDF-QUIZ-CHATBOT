@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'sonner';
+import { useAuthErrorHandler } from './useAuthErrorHandler';
 
 export type FileUploadState = {
   file: File | null;
@@ -18,6 +19,7 @@ export const useFileUpload = (chatId: string, onUploadSuccess?: (fileName: strin
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { handleAuthError } = useAuthErrorHandler();
 
   const validateFile = useCallback((file: File): string | null => {
     if (file.type !== "application/pdf") {
@@ -83,6 +85,12 @@ export const useFileUpload = (chatId: string, onUploadSuccess?: (fileName: strin
         return;
       }
       
+      // Check for authentication error first
+      if (handleAuthError(error, "Sie sind nicht eingeloggt. Bitte melden Sie sich an, um Dateien hochzuladen.")) {
+        setFileUpload(prev => ({ ...prev, uploading: false }));
+        throw error;
+      }
+      
       console.error("Error uploading PDF:", error);
       let errorMessage = "Failed to process PDF. Please try again.";
       
@@ -99,7 +107,7 @@ export const useFileUpload = (chatId: string, onUploadSuccess?: (fileName: strin
       setFileUpload(prev => ({ ...prev, uploading: false }));
       throw error;
     }
-  }, [chatId, fileUpload.file, onUploadSuccess]);
+  }, [chatId, fileUpload.file, onUploadSuccess, handleAuthError]);
 
   const clearFile = useCallback(() => {
     setFileUpload({ file: null, progress: 0, uploading: false });

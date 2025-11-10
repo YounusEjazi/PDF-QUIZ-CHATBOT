@@ -1,11 +1,21 @@
-"use client";
-
 import React from "react";
-import { useParams } from "next/navigation";
+import { redirect } from "next/navigation";
+import { getAuthSession } from "@/lib/auth/nextauth";
 import ChatPage from "@/components/chatbot/ChatPage";
 
-const ChatbotPage = () => {
-  const { id: chatId } = useParams();
+type Props = {
+  params: {
+    id: string;
+  };
+};
+
+const ChatbotPage = async ({ params }: Props) => {
+  const { id: chatId } = await params;
+  const session = await getAuthSession();
+
+  if (!session?.user) {
+    redirect("/");
+  }
 
   if (!chatId || typeof chatId !== 'string') {
     return (
