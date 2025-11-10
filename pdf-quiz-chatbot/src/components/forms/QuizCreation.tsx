@@ -22,6 +22,7 @@ import axios, { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "../../hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { ErrorDialog, generateErrorCode, getUserFriendlyMessage } from "../ErrorDialog";
 import {
   Card,
   CardContent,
@@ -50,6 +51,11 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
   const router = useRouter();
   const [showLoader, setShowLoader] = React.useState(false);
   const [finishedLoading, setFinishedLoading] = React.useState(false);
+  const [errorDialogOpen, setErrorDialogOpen] = React.useState(false);
+  const [errorInfo, setErrorInfo] = React.useState<{
+    code: string;
+    message: string;
+  } | null>(null);
   const { toast } = useToast();
   const [language, setLanguage] = React.useState("english");
   const { mutate: getQuestions, isPending } = useMutation({
@@ -79,13 +85,35 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
       onError: (error) => {
         setShowLoader(false);
         if (error instanceof AxiosError) {
-          const errorMessage =
-            error.response?.data?.error || "Something went wrong. Please try again.";
+          const apiEndpoint = "/api/game";
+          const errorCode = generateErrorCode(
+            error.response?.status,
+            apiEndpoint,
+            error.response?.data?.error
+          );
+          const errorMessage = getUserFriendlyMessage(error, apiEndpoint);
+          
+          // Show toast notification
           toast({
-            title: "Error",
+            title: "Quiz Creation Failed",
             description: errorMessage,
             variant: "destructive",
           });
+          
+          // Show error dialog with code
+          setErrorInfo({
+            code: errorCode,
+            message: errorMessage,
+          });
+          setErrorDialogOpen(true);
+        } else {
+          // Fallback for non-Axios errors
+          const errorCode = generateErrorCode(undefined, "/api/game");
+          setErrorInfo({
+            code: errorCode,
+            message: "An unexpected error occurred. Please try again.",
+          });
+          setErrorDialogOpen(true);
         }
       },
       onSuccess: ({ gameId }: { gameId: string }) => {
@@ -285,6 +313,17 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Error Dialog */}
+      {errorInfo && (
+        <ErrorDialog
+          open={errorDialogOpen}
+          onOpenChange={setErrorDialogOpen}
+          errorCode={errorInfo.code}
+          errorMessage={errorInfo.message}
+          apiEndpoint="/api/game"
+        />
+      )}
     </div>
   );
 };

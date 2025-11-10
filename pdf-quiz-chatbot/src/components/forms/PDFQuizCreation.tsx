@@ -16,6 +16,7 @@ import axios, { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import LoadingQuestions from "../LoadingQuestions";
 import PDFViewer from "../PDFViewer";
+import { ErrorDialog, generateErrorCode, getUserFriendlyMessage } from "../ErrorDialog";
 import {
   Select,
   SelectContent,
@@ -38,6 +39,11 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [selectedPages, setSelectedPages] = React.useState<number[]>([]);
   const [totalPages, setTotalPages] = React.useState<number>(0);
+  const [errorDialogOpen, setErrorDialogOpen] = React.useState(false);
+  const [errorInfo, setErrorInfo] = React.useState<{
+    code: string;
+    message: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const { mutate: uploadPDF, status } = useMutation<UploadResponse, Error>({
@@ -64,13 +70,35 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
     onError: (error) => {
       setShowLoader(false);
       if (error instanceof AxiosError) {
-        const errorMessage =
-          error.response?.data?.error || "Something went wrong. Please try again.";
+        const apiEndpoint = "/api/upload";
+        const errorCode = generateErrorCode(
+          error.response?.status,
+          apiEndpoint,
+          error.response?.data?.error
+        );
+        const errorMessage = getUserFriendlyMessage(error, apiEndpoint);
+        
+        // Show toast notification
         toast({
-          title: "Error",
+          title: "Upload Failed",
           description: errorMessage,
           variant: "destructive",
         });
+        
+        // Show error dialog with code
+        setErrorInfo({
+          code: errorCode,
+          message: errorMessage,
+        });
+        setErrorDialogOpen(true);
+      } else {
+        // Fallback for non-Axios errors
+        const errorCode = generateErrorCode(undefined, "/api/upload");
+        setErrorInfo({
+          code: errorCode,
+          message: "An unexpected error occurred. Please try again.",
+        });
+        setErrorDialogOpen(true);
       }
     },
   });
@@ -349,6 +377,17 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
           </Card>
         )}
       </div>
+
+      {/* Error Dialog */}
+      {errorInfo && (
+        <ErrorDialog
+          open={errorDialogOpen}
+          onOpenChange={setErrorDialogOpen}
+          errorCode={errorInfo.code}
+          errorMessage={errorInfo.message}
+          apiEndpoint="/api/upload"
+        />
+      )}
     </div>
   );
 };
