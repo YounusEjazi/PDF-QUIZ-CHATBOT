@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import { useAuthErrorHandler } from './useAuthErrorHandler';
@@ -33,7 +33,26 @@ export const useChat = (chatId: string, onNewChatId?: (newChatId: string) => voi
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const prevChatIdRef = useRef<string>(chatId);
   const { handleAuthError } = useAuthErrorHandler();
+
+  // Reset messages when chatId changes (except when going from temp to real ID)
+  useEffect(() => {
+    // Only reset if switching between two real chat IDs (not temp)
+    if (chatId !== prevChatIdRef.current && chatId !== "temp" && prevChatIdRef.current !== "temp") {
+      console.log('Chat ID changed in useChat, resetting messages:', prevChatIdRef.current, '->', chatId);
+      setChatState(prev => ({
+        ...prev,
+        messages: [],
+        isNewChat: true,
+      }));
+    }
+    // If going from temp to real ID, keep messages (they were just sent)
+    if (prevChatIdRef.current === "temp" && chatId !== "temp") {
+      console.log('Switching from temp to real chatId, keeping messages:', chatId);
+    }
+    prevChatIdRef.current = chatId;
+  }, [chatId]);
 
   const handleApiError = useCallback((error: unknown, operation: string) => {
     console.error(`Error in ${operation}:`, error);

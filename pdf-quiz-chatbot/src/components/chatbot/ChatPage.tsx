@@ -47,19 +47,34 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
 
   // Always use the latest currentChatId for hooks
   const chatIdForHooks = currentChatId || "temp";
-  const { chatState, sendMessage, fetchMessages, retry } = useChat(chatIdForHooks, (newChatId) => {
+  const { chatState, sendMessage, fetchMessages, retry } = useChat(chatIdForHooks, async (newChatId) => {
     console.log('New chat ID received from useChat:', newChatId);
-    setCurrentChatId(newChatId);
-    router.push(`/chatbot/${newChatId}`);
+    if (newChatId && newChatId !== currentChatId && newChatId !== "temp") {
+      setCurrentChatId(newChatId);
+      // Use replace instead of push to avoid adding to history
+      router.replace(`/chatbot/${newChatId}`);
+    }
   });
   const { fileUpload, handleFileUpload, handleSubmitFile, clearFile } = useFileUpload(chatIdForHooks);
   const { chatsState, createChat, deleteChat, updateChatName } = useChats();
 
   // Combine chatState messages with optimistic messages for display
   const displayMessages = useMemo(() => {
-    // If we have real messages from the chat state, use those
+    // If we have real messages from the chat state, merge with optimistic if needed
     if (chatState.messages.length > 0) {
-      return chatState.messages;
+      // Remove optimistic messages that match real messages by content and sender
+      // This prevents duplicates when real messages are loaded
+      const realMessagesByKey = new Map(
+        chatState.messages.map((m: any) => [`${m.sender}:${m.content.trim()}`, m])
+      );
+      
+      const newOptimistic = optimisticMessages.filter((m: any) => {
+        const key = `${m.sender}:${m.content.trim()}`;
+        // Keep optimistic message only if no real message matches it
+        return !realMessagesByKey.has(key);
+      });
+      
+      return [...chatState.messages, ...newOptimistic];
     }
     // Otherwise, use optimistic messages (for new chats or when loading)
     return optimisticMessages;
@@ -73,20 +88,58 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
     scrollToBottom();
   }, [displayMessages, scrollToBottom]);
 
+  // Track previous chatId to detect changes
+  const prevChatIdRef = useRef<string | null>(currentChatId);
+  
   useEffect(() => {
-    if (currentChatId && currentChatId !== "temp") {
-      console.log('ChatPage: fetchMessages called for chatId:', currentChatId);
+    if (currentChatId && currentChatId !== "temp" && currentChatId !== prevChatIdRef.current) {
+      console.log('ChatPage: Chat ID changed, fetching messages for chatId:', currentChatId);
+      prevChatIdRef.current = currentChatId;
+      // Always fetch messages when chatId changes (after redirect)
+      // Use setTimeout to ensure the route has updated
+      setTimeout(() => {
+        fetchMessages();
+      }, 100);
+    } else if (currentChatId && currentChatId !== "temp" && chatState.messages.length === 0 && optimisticMessages.length === 0) {
+      // Initial load - only fetch if no messages
+      console.log('ChatPage: Initial fetchMessages for chatId:', currentChatId);
       fetchMessages();
+    } else if (chatState.messages.length > 0 && optimisticMessages.length > 0) {
+      // If we have real messages, clear optimistic messages that are duplicates
+      // Match by content and sender, not just ID (since real messages have different IDs)
+      const realMessagesByKey = new Set(
+        chatState.messages.map((m: any) => `${m.sender}:${m.content.trim()}`)
+      );
+      setOptimisticMessages((prev: any[]) => 
+        prev.filter((m: any) => {
+          const key = `${m.sender}:${m.content.trim()}`;
+          return !realMessagesByKey.has(key);
+        })
+      );
     }
-  }, [fetchMessages, currentChatId]);
+  }, [fetchMessages, currentChatId, chatState.messages.length, optimisticMessages.length]);
 
   // Handle initial chatId from URL parameter (when redirected from /chatbot/[id])
   useEffect(() => {
-    if (chatId && chatId !== currentChatId) {
+    if (chatId && chatId !== currentChatId && chatId !== "temp") {
       console.log('Setting chatId from URL parameter:', chatId);
+      const wasTemp = currentChatId === null || currentChatId === "temp";
       setCurrentChatId(chatId);
+      // Only clear optimistic messages if navigating to a completely different chat
+      // Keep them if we're just transitioning from temp to real ID (after sending first message)
+      if (!wasTemp && chatId !== currentChatId) {
+        setOptimisticMessages([]);
+      }
+      // If we just transitioned from temp to real ID, ensure messages are loaded
+      if (wasTemp) {
+        console.log('Transitioned from temp to real chatId, ensuring messages are loaded');
+        // Messages should already be in chatState from sendMessage, but fetch to be sure
+        setTimeout(() => {
+          fetchMessages();
+        }, 200);
+      }
     }
-  }, [chatId, currentChatId]);
+  }, [chatId, currentChatId, fetchMessages]);
 
   // Detect if this is a new chat (no messages yet)
   useEffect(() => {
@@ -179,25 +232,26 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
 
     // Mark that a message has been sent to hide prompt cards
 
-    // Always add optimistic user message first (for both prompt and PDF+prompt)
-    const optimisticMsg = {
-      id: Date.now().toString() + '-user',
-      sender: "user" as const,
-      content: inputValue,
-      createdAt: new Date(),
-      optimistic: true,
-    };
-    setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
-    setIsProcessing(true);
-
     // If a PDF is selected, send both prompt and PDF together
     if (fileUpload.file) {
+      // Add optimistic user message for PDF uploads (since we don't use sendMessage)
+      const optimisticMsg = {
+        id: Date.now().toString() + '-user',
+        sender: "user" as const,
+        content: inputValue,
+        createdAt: new Date(),
+        optimistic: true,
+      };
+      setOptimisticMessages((msgs) => [...msgs, optimisticMsg]);
+      setIsProcessing(true);
       try {
-        // If no chat ID, create one first
+        // If no chat ID, create one first (but don't redirect yet)
         let targetChatId = currentChatId;
+        let isNewChat = false;
         if (!currentChatId || currentChatId === "temp") {
           targetChatId = await createNewChat();
           setCurrentChatId(targetChatId);
+          isNewChat = true;
         }
 
         // Prepare FormData
@@ -205,9 +259,17 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         formData.append("pdf", fileUpload.file);
         formData.append("prompt", inputValue);
 
+        // Add optimistic bot message to show processing state
+        const optimisticBotMsg = {
+          id: Date.now().toString() + '-bot-processing',
+          sender: "bot" as const,
+          content: "📄 Processing PDF and generating response...",
+          createdAt: new Date(),
+          optimistic: true,
+        };
+        setOptimisticMessages((msgs) => [...msgs, optimisticBotMsg]);
 
-
-        // Upload PDF and prompt together
+        // Upload PDF and prompt together - wait for response before redirecting
         const response = await axios.post(`/api/chat/${targetChatId}/pdf`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           onUploadProgress: (progressEvent) => {
@@ -217,7 +279,13 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
             // Optionally set upload progress state here
           },
         });
-        // Only clear input and fetch messages after backend responds
+
+        // Now that messages are saved in DB, redirect if this was a new chat
+        if (isNewChat) {
+          router.replace(`/chatbot/${targetChatId}`);
+        }
+
+        // Fetch messages from DB to replace optimistic ones
         await fetchMessages();
         setOptimisticMessages([]); // Remove optimistic messages after backend fetch
         clearFile();
@@ -225,17 +293,21 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         setIsProcessing(false);
       } catch (error) {
         console.error("Failed to send prompt and PDF:", error);
+        // Remove optimistic messages on error
+        setOptimisticMessages((msgs) => msgs.filter((m: any) => !m.optimistic || m.sender === "user"));
+        setIsProcessing(false);
       }
       return;
     }
 
 
     // Send the message - let the useChat hook handle chat creation
-    await sendMessage(inputValue);
-    setOptimisticMessages([]); // Remove optimistic messages after backend fetch
+    const messageContent = inputValue;
+    setInputValue(""); // Clear input before sending
+    await sendMessage(messageContent);
+    // Don't clear optimistic messages immediately - they'll be replaced when messages are fetched
     setIsProcessing(false);
-    // Don't clear input value - let user see what was sent and potentially modify it
-  }, [inputValue, chatState.loading, sendMessage, fileUpload.file, clearFile]);
+  }, [inputValue, chatState.loading, sendMessage, fileUpload.file, clearFile, currentChatId, router, createNewChat, fetchMessages]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -537,6 +609,40 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
         <div className="chat-input-container p-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col gap-3">
+              {/* File Preview - Above input */}
+              {fileUpload.file && (
+                <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/80 dark:to-pink-950/80 dark:bg-gray-800/90 rounded-xl border border-purple-200/50 dark:border-purple-700/50 dark:border-gray-700 shadow-sm backdrop-blur-sm">
+                  <div className="flex-shrink-0 p-2 bg-purple-100 dark:bg-purple-900/70 dark:bg-gray-700 rounded-lg">
+                    <FileUp className="w-4 h-4 text-purple-600 dark:text-purple-300" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-purple-900 dark:text-purple-100 dark:text-gray-100 truncate">
+                      {fileUpload.file.name}
+                    </p>
+                    <p className="text-xs text-purple-600 dark:text-purple-300 dark:text-gray-400">
+                      {(fileUpload.file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  {fileUpload.uploading ? (
+                    <div className="flex-shrink-0 flex items-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-600 dark:text-purple-300" />
+                      <span className="text-xs text-purple-600 dark:text-purple-300 dark:text-gray-300">
+                        {fileUpload.progress}%
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={clearFile}
+                      className="flex-shrink-0 p-2 hover:bg-red-100 dark:hover:bg-red-900/40 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      title="Remove file"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500 dark:text-red-400" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Elegant Input Section with integrated send button */}
               <div className="relative">
                 {/* Hidden File Input */}
@@ -565,8 +671,7 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                       "w-full bg-transparent border-0 resize-none focus:outline-none focus:ring-0",
                       "px-4 py-3 pr-12 pl-12",
                       "text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400",
-                      "rounded-2xl",
-                      fileUpload.file && "pb-16"
+                      "rounded-2xl"
                     )}
                     rows={1}
                     style={{
@@ -624,27 +729,6 @@ const ChatPage = ({ chatId }: ChatPageProps) => {
                       <Send className="w-5 h-5" />
                     )}
                   </button>
-                  
-                  {/* File Preview inside input */}
-                  {fileUpload.file && (
-                    <div className="absolute bottom-2 left-3 right-16 flex items-center space-x-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                      <FileUp className="w-3 h-3 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                      <span className="text-xs text-purple-700 dark:text-purple-300 truncate flex-1">
-                        {fileUpload.file.name}
-                      </span>
-                      {fileUpload.uploading ? (
-                        <Loader2 className="w-3 h-3 animate-spin text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={clearFile}
-                          className="h-5 w-5 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 flex-shrink-0 rounded flex items-center justify-center transition-colors"
-                        >
-                          <Trash2 className="w-2.5 h-2.5 text-red-500" />
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
