@@ -295,10 +295,6 @@ export function AdminDashboard() {
             <p className="text-sm font-medium">{user.role}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Points</p>
-            <p className="text-sm font-medium">{user.totalPoints}</p>
-          </div>
-          <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Quizzes</p>
             <p className="text-sm font-medium">{user.quizzesTaken}</p>
           </div>
@@ -414,7 +410,6 @@ export function AdminDashboard() {
                           <TableHead className="w-[200px]">User</TableHead>
                           <TableHead className="hidden md:table-cell">Role</TableHead>
                           <TableHead className="hidden lg:table-cell">Joined</TableHead>
-                          <TableHead className="hidden sm:table-cell">Points</TableHead>
                           <TableHead className="hidden md:table-cell">Quizzes</TableHead>
                           <TableHead className="hidden lg:table-cell">Last Active</TableHead>
                           <TableHead>Actions</TableHead>
@@ -453,7 +448,6 @@ export function AdminDashboard() {
                             <TableCell className="hidden lg:table-cell">
                               {new Date(user.createdAt).toLocaleDateString()}
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">{user.totalPoints}</TableCell>
                             <TableCell className="hidden md:table-cell">{user.quizzesTaken}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               {new Date(user.lastActive).toLocaleDateString()}

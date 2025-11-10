@@ -10,20 +10,15 @@ import {
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Activity,
-  MessageSquare,
-  BarChart3,
   Clock,
 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Game = {
   id: string;
@@ -77,7 +72,7 @@ export function UserDetailsDialog({
   editForm,
   setEditForm,
 }: UserDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'activity' | 'games'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'activity'>('profile');
 
   if (!user) return null;
 
@@ -93,7 +88,7 @@ export function UserDetailsDialog({
 
         {/* Tab Navigation */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 px-4">
-          {['profile', 'activity', 'games'].map((tab) => (
+          {['profile', 'activity'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as typeof activeTab)}
@@ -164,24 +159,6 @@ export function UserDetailsDialog({
                 <Card className="bg-white/50 dark:bg-gray-800/50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      <p className="text-sm font-medium">Chats</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-2">{user._count.chats}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white/50 dark:bg-gray-800/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-green-600 dark:text-green-400" />
-                      <p className="text-sm font-medium">Points</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-2">{user.totalPoints}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white/50 dark:bg-gray-800/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                       <p className="text-sm font-medium">Quizzes</p>
                     </div>
@@ -189,38 +166,6 @@ export function UserDetailsDialog({
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          )}
-
-          {activeTab === 'games' && (
-            <div className="space-y-4">
-              {user.games.map((game, index) => (
-                <Card key={game.id} className="bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-800/70 transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-medium truncate text-base">Quiz #{user.games.length - index}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(game.timeStarted).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right flex flex-col items-end">
-                        <div className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
-                          {game.timeEnded ? 'Completed' : 'In Progress'}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {user.games.length === 0 && (
-                <div className="text-center py-6 text-muted-foreground">
-                  <p>No games played yet</p>
-                </div>
-              )}
             </div>
           )}
         </ScrollArea>
