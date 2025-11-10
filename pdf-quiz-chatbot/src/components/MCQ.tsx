@@ -22,17 +22,32 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 type Props = {
-  game: Game & { questions: Pick<Question, "id" | "options" | "question">[] };
+  game: Game & { questions: Pick<Question, "id" | "options" | "question" | "userAnswer" | "isCorrect">[] };
 };
 
 const MCQ = ({ game }: Props) => {
   const router = useRouter();
-  const [questionIndex, setQuestionIndex] = React.useState(0);
+  
+  // Find first unanswered question, or start from beginning
+  const firstUnansweredIndex = React.useMemo(() => {
+    return game.questions.findIndex(q => !q.userAnswer) ?? 0;
+  }, [game.questions]);
+  
+  const [questionIndex, setQuestionIndex] = React.useState(firstUnansweredIndex >= 0 ? firstUnansweredIndex : 0);
   const [hasEnded, setHasEnded] = React.useState(false);
-  const [stats, setStats] = React.useState({
-    correct_answers: 0,
-    wrong_answers: 0,
-  });
+  
+  // Initialize stats from existing answers
+  const initialStats = React.useMemo(() => {
+    let correct = 0;
+    let wrong = 0;
+    game.questions.forEach(q => {
+      if (q.isCorrect === true) correct++;
+      else if (q.isCorrect === false) wrong++;
+    });
+    return { correct_answers: correct, wrong_answers: wrong };
+  }, [game.questions]);
+  
+  const [stats, setStats] = React.useState(initialStats);
   const [selectedChoice, setSelectedChoice] = React.useState<number>(0);
   const [now, setNow] = React.useState(new Date());
   const [showAnswer, setShowAnswer] = React.useState(false);
@@ -78,6 +93,25 @@ const MCQ = ({ game }: Props) => {
       return [];
     }
   }, [currentQuestion]);
+
+  // Update selected choice and show answer state when question changes or options load
+  React.useEffect(() => {
+    if (currentQuestion?.userAnswer && options.length > 0) {
+      const answerIndex = options.findIndex(opt => opt === currentQuestion.userAnswer);
+      if (answerIndex >= 0) {
+        setSelectedChoice(answerIndex);
+      }
+      // If question was already answered, show the answer
+      if (currentQuestion.isCorrect !== null) {
+        setShowAnswer(true);
+        setIsCorrect(currentQuestion.isCorrect);
+      }
+    } else {
+      setSelectedChoice(0);
+      setShowAnswer(false);
+      setIsCorrect(null);
+    }
+  }, [questionIndex, currentQuestion, options]);
 
   const { mutate: checkAnswer, isPending: isChecking } = useMutation({
     mutationFn: async () => {

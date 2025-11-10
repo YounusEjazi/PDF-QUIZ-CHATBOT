@@ -110,49 +110,24 @@ export async function POST(req: Request, res: Response) {
         data: manyData,
       });
 
-      // Update user statistics for MCQ game
-      const correctAnswers = manyData.filter((q: { answer: string, options: string }) => 
-        JSON.parse(q.options)[0] === q.answer
-      ).length;
-      const score = (correctAnswers / manyData.length) * 100;
-      
-      // Update user statistics
+      // Update user statistics for MCQ game (only increment counters, don't calculate score yet)
       await prisma.user.update({
         where: { id: user.id },
         data: {
           totalQuestions: { increment: manyData.length },
-          totalCorrect: { increment: correctAnswers },
           quizzesTaken: { increment: 1 },
-          totalPoints: { increment: Math.round(score) },
-          experience: { increment: Math.round(score / 2) }, // Half of score as XP
-          averageScore: {
-            set: await calculateNewAverage(user.id, score)
-          },
-          bestScore: {
-            set: await updateBestScore(user.id, score)
-          },
-          winStreak: {
-            set: score >= 70 ? user.winStreak + 1 : 0 // Reset streak if score < 70%
-          },
-          bestStreak: {
-            set: score >= 70 && (user.winStreak + 1) > (user.bestStreak || 0) 
-              ? user.winStreak + 1 
-              : user.bestStreak
-          },
-          level: {
-            set: await calculateNewLevel(user.id, Math.round(score / 2))
-          },
+          experience: { increment: 25 }, // Base XP for starting a game
           lastQuizDate: new Date(),
           lastActive: new Date()
         }
       });
 
-      // Update game with final score
+      // Initialize game with null score and timeEnded (will be updated when game ends)
       await prisma.game.update({
         where: { id: game.id },
         data: {
-          score,
-          timeEnded: new Date()
+          score: null, // Will be calculated when game ends
+          timeEnded: null // Will be updated when game ends
         }
       });
     } else if (type === "open_ended") {

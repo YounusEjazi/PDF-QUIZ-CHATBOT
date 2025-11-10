@@ -30,6 +30,11 @@ const MCQPage = async ({ params }: Props) => {
           id: true,
           question: true,
           options: true,
+          userAnswer: true,
+          isCorrect: true,
+        },
+        orderBy: {
+          createdAt: 'asc',
         },
       },
     },
@@ -38,6 +43,11 @@ const MCQPage = async ({ params }: Props) => {
   if (!game || !game.questions || game.questions.length === 0 || game.gameType === "open_ended") {
     console.error("Invalid game data:", { gameId, game });
     return redirect("/quiz");
+  }
+
+  // If game is already completed, redirect to statistics
+  if (game.timeEnded) {
+    return redirect(`/statistics/${gameId}`);
   }
 
   return (

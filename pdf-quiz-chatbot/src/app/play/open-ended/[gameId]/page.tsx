@@ -26,6 +26,8 @@ const OpenEndedPage = async ({ params: { gameId } }: Props) => {
           id: true,
           question: true,
           answer: true,
+          userAnswer: true,
+          percentageCorrect: true,
         },
         orderBy: {
           createdAt: 'asc'
@@ -47,6 +49,11 @@ const OpenEndedPage = async ({ params: { gameId } }: Props) => {
   if (!game.questions || game.questions.length === 0) {
     console.error("No questions found for game:", gameId);
     return redirect("/quiz");
+  }
+
+  // If game is already completed, redirect to statistics
+  if (game.timeEnded) {
+    return redirect(`/statistics/${gameId}`);
   }
 
   // Log game data for debugging
