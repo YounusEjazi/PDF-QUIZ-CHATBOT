@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 type Props = {
-  game: Game & { questions: Pick<Question, "id" | "question" | "answer">[] };
+  game: Game & { questions: Pick<Question, "id" | "question" | "answer" | "userAnswer" | "percentageCorrect">[] };
 };
 
 interface CheckAnswerResponse {
@@ -32,17 +32,48 @@ interface CheckAnswerResponse {
 
 const OpenEnded = ({ game }: Props) => {
   const router = useRouter();
+  
+  // Find first unanswered question, or start from beginning
+  const firstUnansweredIndex = React.useMemo(() => {
+    const index = game.questions.findIndex(q => !q.userAnswer);
+    return index >= 0 ? index : 0;
+  }, [game.questions]);
+  
   const [hasEnded, setHasEnded] = React.useState(false);
-  const [questionIndex, setQuestionIndex] = React.useState(0);
-  const [blankAnswer, setBlankAnswer] = React.useState("");
-  const [averagePercentage, setAveragePercentage] = React.useState(0);
+  const [questionIndex, setQuestionIndex] = React.useState(firstUnansweredIndex);
+  
+  const currentQuestion = React.useMemo(() => {
+    return game.questions[questionIndex];
+  }, [questionIndex, game.questions]);
+  
+  // Initialize blankAnswer with existing answer if resuming
+  const [blankAnswer, setBlankAnswer] = React.useState(currentQuestion?.userAnswer || "");
+  
+  // Initialize average percentage from existing answers
+  const initialAverage = React.useMemo(() => {
+    const answeredQuestions = game.questions.filter(q => q.percentageCorrect !== null);
+    if (answeredQuestions.length === 0) return 0;
+    const sum = answeredQuestions.reduce((acc, q) => acc + (q.percentageCorrect || 0), 0);
+    return Math.round(sum / answeredQuestions.length);
+  }, [game.questions]);
+
+  const [averagePercentage, setAveragePercentage] = React.useState(initialAverage);
   const [totalCorrect, setTotalCorrect] = React.useState(0);
   const [showAnswer, setShowAnswer] = React.useState(false);
   const [currentPercentage, setCurrentPercentage] = React.useState<number | null>(null);
 
-  const currentQuestion = React.useMemo(() => {
-    return game.questions[questionIndex];
-  }, [questionIndex, game.questions]);
+  // Update blankAnswer and show answer state when question changes
+  React.useEffect(() => {
+    setBlankAnswer(currentQuestion?.userAnswer || "");
+    // If question was already answered, show the answer
+    if (currentQuestion?.userAnswer && currentQuestion?.percentageCorrect !== null) {
+      setShowAnswer(true);
+      setCurrentPercentage(currentQuestion.percentageCorrect);
+    } else {
+      setShowAnswer(false);
+      setCurrentPercentage(null);
+    }
+  }, [questionIndex, currentQuestion]);
 
   const { mutate: endGame, isPending: isEnding } = useMutation({
     mutationFn: async () => {
