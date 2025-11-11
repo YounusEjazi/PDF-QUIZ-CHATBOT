@@ -80,6 +80,9 @@ const About = async (props: Props) => {
                 Our goal is to revolutionize the way students learn by transforming traditional study materials into engaging, interactive experiences.
               </p>
               <p className="text-base sm:text-lg leading-relaxed">
+                This project came about under the <strong className="text-purple-600 dark:text-purple-400">Lehrstuhl</strong> of <strong className="text-purple-600 dark:text-purple-400">Prof. Dr. Claudia Müller</strong> and under the supervision of <strong className="text-purple-600 dark:text-purple-400">Prof. Dr. Markus Rhode</strong>.
+              </p>
+              <p className="text-base sm:text-lg leading-relaxed">
                 We believe that learning should be fun, interactive, and accessible. This platform combines the power of artificial intelligence with gamification principles to create a unique learning experience that motivates students and enhances knowledge retention.
               </p>
             </div>
