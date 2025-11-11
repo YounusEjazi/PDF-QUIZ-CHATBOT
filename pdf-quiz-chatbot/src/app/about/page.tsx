@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { 
   GraduationCap, 
   BookOpen, 
@@ -14,6 +15,18 @@ import {
 } from "lucide-react";
 
 type Props = {};
+
+const TechIcon = ({ tech }: { tech: { name: string; image: string; size?: number } }) => {
+  return (
+    <Image
+      src={tech.image}
+      alt={tech.name}
+      width={tech.size || 32}
+      height={tech.size || 32}
+      className="object-contain"
+    />
+  );
+};
 
 const About = async (props: Props) => {
   return (
@@ -188,6 +201,40 @@ const About = async (props: Props) => {
                 <li>Answering questions about uploaded PDF documents</li>
                 <li>Providing detailed explanations and clarifications</li>
               </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Built with Modern Technologies */}
+        <Card className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-xl sm:rounded-2xl shadow-xl transition-all hover:shadow-2xl mt-6">
+          <CardHeader className="border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl">Built with Modern Technologies</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 px-4 sm:px-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {[
+                { name: "Next.js", display: "Next.js", image: "/nextjs.png", size: 32 },
+                { name: "tailwind", display: "Tailwind", image: "/tailwind.png", size: 32 },
+                { name: "nextauth", display: "NextAuth", image: "/nextauth.png", size: 32 },
+                { name: "openai", display: "OpenAI", image: "/openai.png", size: 32 },
+                { name: "react query", display: "React Query", image: "/react-query.png", size: 32 },
+                { name: "prisma", display: "Prisma", image: "/prisma.png", size: 32 },
+                { name: "typescript", display: "TypeScript", image: "/typescript.png", size: 32 },
+                { name: "pinecone", display: "Pinecone", image: "/pinecone.png", size: 32 },
+                { name: "langchain", display: "LangChain", image: "/langchain.svg", size: 32 },
+              ].map((tech) => (
+                <div
+                  key={tech.name}
+                  className="group flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-white/50 dark:border-slate-700/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/10 hover:border-purple-300/50 dark:hover:border-purple-600/50"
+                >
+                  <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-700 p-1 sm:p-1.5 shadow-sm group-hover:shadow-md transition-shadow">
+                    <TechIcon tech={tech} />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-colors">
+                    {tech.display}
+                  </span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

@@ -1,4 +1,3 @@
-import DetailsDialog from "@/components/DetailsDialog";
 import HistoryCard from "@/components/dashboard/HistoryCard";
 import ChatbotUI from "@/components/dashboard/ChatbotUI";
 import QuizMeCard from "@/components/dashboard/QuizMeCard";
@@ -6,7 +5,7 @@ import RecentActivityCard from "@/components/dashboard/RecentActivityCard";
 import { getAuthSession } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import React from "react";
-import { LogOut, Settings, User, MessageSquare } from "lucide-react";
+import { LogOut, Settings, User, MessageSquare, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import PersonalInsightsCard from "@/components/dashboard/PersonalInsightsCard";
@@ -92,7 +91,12 @@ const Dashboard = async (props: Props) => {
               <span className="hidden sm:inline">Feedback</span>
             </span>
           </Link>
-          <DetailsDialog />
+          <Link href="/about">
+            <span className="group relative inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm font-medium text-white transition-all rounded-lg sm:rounded-xl bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 hover:shadow-lg hover:shadow-slate-500/25 hover:scale-[1.02] active:scale-[0.98] border border-slate-600/30">
+              <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:rotate-12 transition-transform duration-200" />
+              <span className="hidden sm:inline">What is this</span>
+            </span>
+          </Link>
         </div>
       </nav>
 

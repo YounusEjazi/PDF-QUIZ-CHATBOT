@@ -83,7 +83,8 @@ const PersonalInsightsCard = ({ insights }: Props) => {
       "group relative overflow-hidden transition-all duration-300",
       "bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50",
       "border border-indigo-200/50 dark:border-indigo-800/50",
-      "hover:shadow-xl hover:shadow-indigo-500/25"
+      "hover:shadow-xl hover:shadow-indigo-500/25",
+      "h-full flex flex-col"
     )}>
       {/* Enhanced Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -116,7 +117,7 @@ const PersonalInsightsCard = ({ insights }: Props) => {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 relative z-10 h-full flex flex-col">
+      <CardContent className="space-y-4 relative z-10 h-full flex flex-col min-h-0">
         {/* Level Progress */}
         <m.div
           initial={{ opacity: 0, y: 20 }}
@@ -198,20 +199,20 @@ const PersonalInsightsCard = ({ insights }: Props) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 rounded-lg p-3 border border-orange-200/50 dark:border-orange-800/50"
+          className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 rounded-lg p-2 sm:p-3 border border-orange-200/50 dark:border-orange-800/50"
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
-              <span className="font-semibold text-slate-700 dark:text-slate-300">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+              <span className="text-sm sm:text-base font-semibold text-slate-700 dark:text-slate-300">
                 Current Streak
               </span>
             </div>
             <div className="text-right">
-              <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
+              <div className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400">
                 {winStreak}
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
                 Best: {bestStreak}
               </div>
             </div>
@@ -224,7 +225,7 @@ const PersonalInsightsCard = ({ insights }: Props) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="space-y-2 flex-1"
+            className="space-y-2 flex-1 min-h-0"
           >
             <div className="flex items-center space-x-2">
               <BookOpen className="w-4 h-4 text-indigo-500" />
@@ -232,14 +233,15 @@ const PersonalInsightsCard = ({ insights }: Props) => {
                 Recent Topics
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1 sm:gap-2">
               {recentTopics.slice(0, 3).map((topic, index) => (
                 <m.span
                   key={topic}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                  className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs rounded-full border border-indigo-200 dark:border-indigo-800"
+                  className="px-1 py-0.5 sm:px-2 sm:py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-[9px] sm:text-xs rounded-full border border-indigo-200 dark:border-indigo-800 max-w-full break-words overflow-wrap-anywhere"
+                  style={{ wordBreak: 'break-word' as any }}
                 >
                   {topic}
                 </m.span>
