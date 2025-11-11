@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import { v4 as uuidv4 } from "uuid";
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { generateEmbeddings } from "@/lib/ai/openai";
 import { prisma } from "@/lib/db/db";
+import { extractTextHybrid } from "@/lib/pdf/pdfWithOCR";
 
 
 interface ChunkMetadata {
@@ -38,8 +38,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cha
     const fileBuffer = Buffer.from(await uploadedFile.arrayBuffer());
     await fs.writeFile(tempFilePath, fileBuffer);
 
-    const loader = new PDFLoader(tempFilePath);
-    const pages = await loader.load();
+    console.log("Extracting text from PDF (with OCR fallback)...");
+    // Use hybrid approach: try text extraction first, fallback to OCR for scanned PDFs
+    // OCR will automatically fall back to text extraction if it fails
+    const pages = await extractTextHybrid(tempFilePath, {
+      minTextLength: 50,
+      ocrLanguage: "eng", // Default to English, can be made configurable
+      enableOCR: true, // OCR enabled - will gracefully fallback if unavailable
+    });
 
     await fs.unlink(tempFilePath);
 

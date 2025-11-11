@@ -34,6 +34,7 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
   const [topic, setTopic] = React.useState("");
   const [amount, setAmount] = React.useState(5);
   const [language, setLanguage] = React.useState("english");
+  const [useCustomTopic, setUseCustomTopic] = React.useState(false); // New state for topic mode
   const [showLoader, setShowLoader] = React.useState(false);
   const [finishedLoading, setFinishedLoading] = React.useState(false);
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
@@ -56,6 +57,7 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
       formData.append("amount", amount.toString());
       formData.append("language", language);
       formData.append("pages", selectedPages.join(","));
+      formData.append("useCustomTopic", useCustomTopic.toString()); // Pass topic mode
       const response = await axios.post("/api/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -151,14 +153,25 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
   };
 
   const handleSubmit = () => {
-    if (!file || topic.trim() === "" || selectedPages.length === 0) {
+    if (!file || selectedPages.length === 0) {
       toast({
         title: "Error",
-        description: "Please upload a file, select pages, and fill out all fields before submitting.",
+        description: "Please upload a file and select pages before submitting.",
         variant: "destructive",
       });
       return;
     }
+    
+    // Only require topic if custom topic is enabled (user wants to specify it)
+    if (useCustomTopic && topic.trim() === "") {
+      toast({
+        title: "Error",
+        description: "Please enter a topic when 'Benutzerdefiniert' is enabled, or disable it to auto-generate topic.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setShowLoader(true);
     uploadPDF();
   };
@@ -172,7 +185,7 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-lg mx-auto">
       <div className="flex flex-col items-center gap-6 sm:gap-8">
         {/* Upload + Config Card */}
         <Card className="w-full backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 border border-white/20 rounded-2xl shadow-xl transition-all hover:shadow-2xl">
@@ -228,15 +241,45 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
 
             {/* Topic Field */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Topic
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Topic
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="customTopic"
+                    checked={useCustomTopic}
+                    onChange={(e) => setUseCustomTopic(e.target.checked)}
+                    className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                  />
+                  <label
+                    htmlFor="customTopic"
+                    className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer"
+                  >
+                    Benutzerdefiniert
+                  </label>
+                </div>
+              </div>
               <Input
-                placeholder="Enter topic"
+                placeholder={useCustomTopic ? "Enter your custom topic" : "Topic will be generated from selected pages"}
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200"
+                disabled={!useCustomTopic}
+                className={`bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus-visible:ring-purple-500/20 transition-all duration-200 ${
+                  !useCustomTopic ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               />
+              {!useCustomTopic && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Topic will be automatically generated from the content of selected pages
+                </p>
+              )}
+              {useCustomTopic && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Enter your custom topic based on the selected pages
+                </p>
+              )}
             </div>
 
             {/* Page Range Input */}
@@ -335,7 +378,10 @@ const PDFQuizCreation = ({ toggleMode }: { toggleMode: () => void }) => {
                 <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus:ring-purple-500/20">
                   <SelectValue placeholder="Select Language" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50">
+                <SelectContent 
+                  className="bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50 z-[100]"
+                  position="item-aligned"
+                >
                   <SelectItem value="english">English</SelectItem>
                   <SelectItem value="german">German</SelectItem>
                 </SelectContent>

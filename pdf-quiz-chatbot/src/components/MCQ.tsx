@@ -345,6 +345,9 @@ const MCQ = ({ game }: Props) => {
                   variant={selectedChoice === index ? "default" : "outline"}
                   className={cn(
                     "justify-start w-full py-8 relative group transition-all duration-200",
+                    "whitespace-normal sm:whitespace-nowrap", // Override Button's whitespace-nowrap on mobile
+                    "!h-auto", // Override any fixed height
+                    "overflow-visible sm:overflow-hidden", // Allow content to expand on mobile
                     selectedChoice === index && !showAnswer && "bg-gradient-to-r from-purple-600 to-pink-600 text-white",
                     showAnswer && selectedChoice === index && isCorrect && "bg-gradient-to-r from-green-600 to-emerald-600 text-white",
                     showAnswer && selectedChoice === index && !isCorrect && "bg-gradient-to-r from-red-600 to-rose-600 text-white",
@@ -354,16 +357,16 @@ const MCQ = ({ game }: Props) => {
                   disabled={showAnswer}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-lg" />
-                  <div className="flex items-center justify-start gap-4">
+                  <div className="flex items-start sm:items-center justify-start gap-4 w-full overflow-hidden">
                     <div className={cn(
-                      "p-2 px-3 border rounded-lg transition-colors",
+                      "p-2 px-3 border rounded-lg transition-colors flex-shrink-0",
                       selectedChoice === index && !showAnswer && "border-white text-white",
                       showAnswer && selectedChoice === index && isCorrect && "border-white text-white",
                       showAnswer && selectedChoice === index && !isCorrect && "border-white text-white"
                     )}>
                       {index + 1}
                     </div>
-                    <div className="text-start">{option}</div>
+                    <div className="text-start break-words sm:break-normal overflow-wrap-anywhere sm:overflow-wrap-normal flex-1 min-w-0 sm:min-w-auto max-w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{option}</div>
                   </div>
                 </Button>
               </motion.div>

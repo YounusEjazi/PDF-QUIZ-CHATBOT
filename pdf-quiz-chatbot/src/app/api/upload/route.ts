@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import { v4 as uuidv4 } from "uuid";
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { generateEmbeddings } from "@/lib/ai/openai";
@@ -10,6 +9,7 @@ import { strict_output } from "@/lib/ai/gpt";
 import { z } from "zod";
 import { getAuthSession } from "@/lib/auth/nextauth";
 import { GameType, Prisma } from "@prisma/client";
+import { extractTextHybrid } from "@/lib/pdf/pdfWithOCR";
 
 // Define types for chunks
 interface DocumentChunk {
@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const uploadedFile = formData.get("file") as File;
     const language = formData.get("language") as string || "english";
-    const topic = formData.get("topic") as string || "general";
+    let topic = formData.get("topic") as string || "general";
+    const useCustomTopic = formData.get("useCustomTopic") === "true";
     const type = (formData.get("type") as string || "mcq") as GameType;
     const amount = parseInt(formData.get("amount") as string) || 5;
     const pagesStr = formData.get("pages") as string;
@@ -83,9 +84,15 @@ export async function POST(req: NextRequest) {
     const fileBuffer = Buffer.from(await uploadedFile.arrayBuffer());
     await fs.writeFile(tempFilePath, fileBuffer);
 
-    console.log("Loading PDF using PDFLoader...");
-    const loader = new PDFLoader(tempFilePath);
-    const pages = await loader.load();
+    console.log("Extracting text from PDF (with OCR fallback)...");
+    // Use hybrid approach: try text extraction first, fallback to OCR for scanned PDFs
+    // OCR will automatically fall back to text extraction if it fails
+    const ocrLanguage = language === "german" ? "deu" : "eng";
+    const pages = await extractTextHybrid(tempFilePath, {
+      minTextLength: 50,
+      ocrLanguage: ocrLanguage,
+      enableOCR: true, // OCR enabled - will gracefully fallback if unavailable
+    });
 
     // Clean up temporary file
     await fs.unlink(tempFilePath);
@@ -109,10 +116,15 @@ export async function POST(req: NextRequest) {
           .replace(/\t+/g, ' ') // Replace tabs with spaces
           .trim();
         
-        // Skip empty or very short pages
-        if (cleanContent.length < 50) {
-          console.log(`Skipping page ${pageNumber} - content too short (${cleanContent.length} chars)`);
+        // Skip only completely empty pages (OCR might return shorter text, but we should still use it)
+        if (cleanContent.length === 0) {
+          console.log(`Skipping page ${pageNumber} - completely empty`);
           continue;
+        }
+        
+        // Log if content is short (might be from OCR)
+        if (cleanContent.length < 50) {
+          console.log(`Page ${pageNumber} has short content (${cleanContent.length} chars) - may be from OCR, using anyway`);
         }
 
         const splitDocs = await textSplitter.splitDocuments([{
@@ -189,6 +201,62 @@ export async function POST(req: NextRequest) {
 
     if (!vectorsSearchable) {
       console.log("Warning: Vectors may not be fully indexed, proceeding anyway...");
+    }
+
+    // Generate topic from selected pages if custom topic is NOT enabled (general mode)
+    if (!useCustomTopic) {
+      console.log("Generating custom topic from selected pages...");
+      try {
+        // Get a sample of the content (first 2000 chars should be enough for topic generation)
+        const sampleContent = texts.join("\n").substring(0, 2000);
+        
+        const topicPrompt = language === "german" 
+          ? `Analysiere den folgenden Text aus einem PDF-Dokument und erstelle einen prägnanten, beschreibenden Titel/Thema (maximal 5-7 Wörter), der den Hauptinhalt zusammenfasst. Der Titel sollte spezifisch und informativ sein.
+
+Text:
+${sampleContent}
+
+Erstelle nur den Titel/Thema, keine zusätzlichen Erklärungen.`
+          : `Analyze the following text from a PDF document and create a concise, descriptive title/topic (maximum 5-7 words) that summarizes the main content. The title should be specific and informative.
+
+Text:
+${sampleContent}
+
+Create only the title/topic, no additional explanations.`;
+
+        const generatedTopic = await strict_output(
+          topicPrompt,
+          ["Generate a topic"],
+          { topic: "concise topic title, 5-7 words maximum" },
+          "",
+          false,
+          "deepseek-chat",
+          0.7,
+          2,
+          false
+        );
+
+        if (generatedTopic && typeof generatedTopic === 'object' && 'topic' in generatedTopic) {
+          topic = (generatedTopic as any).topic;
+          // Clean up the topic (remove quotes, trim, limit length)
+          topic = topic.replace(/^["']|["']$/g, '').trim().substring(0, 50);
+          console.log(`Generated custom topic: "${topic}"`);
+        } else if (Array.isArray(generatedTopic) && generatedTopic.length > 0) {
+          topic = (generatedTopic[0] as any).topic || topic;
+          topic = topic.replace(/^["']|["']$/g, '').trim().substring(0, 50);
+          console.log(`Generated custom topic: "${topic}"`);
+        } else {
+          // Fallback: use first few words from content
+          const words = sampleContent.split(/\s+/).slice(0, 5).join(" ");
+          topic = words.substring(0, 50);
+          console.log(`Using fallback topic from content: "${topic}"`);
+        }
+      } catch (error) {
+        console.error("Failed to generate custom topic:", error);
+        // Fallback to "general" if topic generation fails
+        topic = "general";
+        console.log("Using default topic: 'general'");
+      }
     }
 
     console.log("Generating questions...");

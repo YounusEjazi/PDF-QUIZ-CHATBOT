@@ -249,7 +249,10 @@ const QuizCreation = ({ topic: topicParam, toggleMode }: Props) => {
                   <SelectTrigger className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 focus:ring-purple-500/20">
                     <SelectValue placeholder="Select Language" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50">
+                  <SelectContent 
+                    className="bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50 z-[100]"
+                    position="item-aligned"
+                  >
                     <SelectItem value="english">English</SelectItem>
                     <SelectItem value="german">German</SelectItem>
                   </SelectContent>
