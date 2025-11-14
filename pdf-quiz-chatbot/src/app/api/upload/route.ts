@@ -86,12 +86,13 @@ export async function POST(req: NextRequest) {
 
     console.log("Extracting text from PDF (with OCR fallback)...");
     // Use hybrid approach: try text extraction first, fallback to OCR for scanned PDFs
-    // OCR will automatically fall back to text extraction if it fails
+    // Images are automatically skipped - only text content will be extracted
     const ocrLanguage = language === "german" ? "deu" : "eng";
     const pages = await extractTextHybrid(tempFilePath, {
       minTextLength: 50,
       ocrLanguage: ocrLanguage,
       enableOCR: true, // OCR enabled - will gracefully fallback if unavailable
+      skipImageOnlyPages: true, // Skip pages that contain only images
     });
 
     // Clean up temporary file

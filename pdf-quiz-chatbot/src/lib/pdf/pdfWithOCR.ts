@@ -188,6 +188,7 @@ async function extractTextWithTesseract(
 /**
  * Hybrid approach: Try text extraction first, use OCR for pages with insufficient text
  * OCR is optional and will gracefully fail if not available
+ * Images are automatically skipped - only pages with extractable text are processed
  */
 export async function extractTextHybrid(
   pdfPath: string,
@@ -195,42 +196,89 @@ export async function extractTextHybrid(
     minTextLength?: number;
     ocrLanguage?: string;
     enableOCR?: boolean; // Allow disabling OCR if it causes issues
+    skipImageOnlyPages?: boolean; // Skip pages that contain only images
   } = {}
 ): Promise<PageContent[]> {
-  const { minTextLength = 50, ocrLanguage = "eng", enableOCR = true } = options;
+  const { 
+    minTextLength = 50, 
+    ocrLanguage = "eng", 
+    enableOCR = true,
+    skipImageOnlyPages = true // Default to skipping image-only pages
+  } = options;
 
   try {
     // Try standard extraction first
     console.log("Starting hybrid extraction: attempting text extraction first...");
-    const loader = new PDFLoader(pdfPath);
+    console.log("Note: Images will be automatically skipped - only text content will be extracted");
+    
+    const loader = new PDFLoader(pdfPath, {
+      // PDFLoader automatically skips images and only extracts text
+      // No additional configuration needed for image skipping
+    });
+    
     const pages = await loader.load();
     console.log(`Text extraction loaded ${pages.length} pages`);
     
     const resultPages: PageContent[] = [];
     let pagesNeedingOCR: number[] = [];
+    let skippedPages: number[] = [];
 
-    // First pass: identify pages that need OCR
+    // First pass: identify pages that need OCR or should be skipped
     for (const page of pages) {
       const pageNum = page.metadata.loc.pageNumber;
-      const textLength = page.pageContent.trim().length;
+      // Clean and validate page content
+      const pageContent = page.pageContent?.trim() || "";
+      const textLength = pageContent.length;
+      
       console.log(`Page ${pageNum}: Extracted ${textLength} characters`);
 
+      // Skip pages with no text content (image-only pages)
+      if (skipImageOnlyPages && textLength === 0) {
+        skippedPages.push(pageNum);
+        console.log(`Page ${pageNum}: ⏭️ Skipped (image-only page, no text content)`);
+        continue;
+      }
+
       if (textLength >= minTextLength) {
-        // Use extracted text
-        resultPages.push(page as PageContent);
+        // Use extracted text - ensure content is valid
+        resultPages.push({
+          pageContent: pageContent,
+          metadata: {
+            loc: {
+              pageNumber: pageNum,
+            },
+          },
+        } as PageContent);
         console.log(
-          `Page ${pageNum}: Using extracted text (${textLength} chars)`
+          `Page ${pageNum}: ✅ Using extracted text (${textLength} chars)`
         );
+      } else if (textLength > 0) {
+        // Some text but not enough - mark for OCR if enabled
+        if (enableOCR) {
+          pagesNeedingOCR.push(pageNum);
+          console.log(
+            `Page ${pageNum}: ⚠️ Insufficient text (${textLength} chars) - will attempt OCR`
+          );
+        } else {
+          // OCR disabled, use what we have if it's not empty
+          resultPages.push({
+            pageContent: pageContent,
+            metadata: {
+              loc: {
+                pageNumber: pageNum,
+              },
+            },
+          } as PageContent);
+          console.log(`Page ${pageNum}: Using available text (${textLength} chars, OCR disabled)`);
+        }
       } else {
-        // Mark for OCR processing
-        pagesNeedingOCR.push(pageNum);
-        console.log(
-          `Page ${pageNum}: Insufficient text (${textLength} chars) - will attempt OCR`
-        );
+        // Empty page - skip it
+        skippedPages.push(pageNum);
+        console.log(`Page ${pageNum}: ⏭️ Skipped (empty page)`);
       }
     }
 
-    // Second pass: Process pages needing OCR
+    // Second pass: Process pages needing OCR (only if enabled and there are pages to process)
     if (pagesNeedingOCR.length > 0 && enableOCR) {
       console.log(`\n=== Starting OCR for ${pagesNeedingOCR.length} pages ===`);
       try {
@@ -243,63 +291,115 @@ export async function extractTextHybrid(
           const ocrPage = ocrPages.find(
             (p) => p.metadata.loc.pageNumber === pageNum
           );
-          if (ocrPage && ocrPage.pageContent.trim().length > 0) {
+          if (ocrPage && ocrPage.pageContent.trim().length >= minTextLength) {
             resultPages.push(ocrPage);
             console.log(
               `Page ${pageNum}: ✅ OCR extracted ${ocrPage.pageContent.length} chars`
             );
           } else {
-            // Find original page and use it even if short
+            // OCR didn't help, find original page
             const originalPage = pages.find(
-              (p) => p.metadata.loc.pageNumber === pageNum
+              (p: any) => p.metadata.loc.pageNumber === pageNum
             );
-            if (originalPage) {
-              resultPages.push(originalPage as PageContent);
-              console.log(`Page ${pageNum}: ⚠️ OCR failed, using original text (${originalPage.pageContent.trim().length} chars)`);
+            if (originalPage && originalPage.pageContent.trim().length > 0) {
+              // Use original text even if short (better than nothing)
+              resultPages.push({
+                pageContent: originalPage.pageContent.trim(),
+                metadata: {
+                  loc: {
+                    pageNumber: pageNum,
+                  },
+                },
+              } as PageContent);
+              console.log(`Page ${pageNum}: ⚠️ OCR didn't improve, using original text (${originalPage.pageContent.trim().length} chars)`);
+            } else {
+              // No text found, skip this page
+              skippedPages.push(pageNum);
+              console.log(`Page ${pageNum}: ⏭️ Skipped (no text found via OCR or extraction)`);
             }
           }
         }
       } catch (ocrError) {
         console.error(`\n❌ OCR processing failed:`, ocrError);
-        console.warn(`Falling back to original extracted text for all pages`);
-        // Fallback: use all original pages
+        console.warn(`Falling back to original extracted text for ${pagesNeedingOCR.length} pages`);
+        // Fallback: use original pages if they have any text
         for (const pageNum of pagesNeedingOCR) {
           const originalPage = pages.find(
-            (p) => p.metadata.loc.pageNumber === pageNum
+            (p: any) => p.metadata.loc.pageNumber === pageNum
           );
-          if (originalPage) {
-            resultPages.push(originalPage as PageContent);
+          if (originalPage && originalPage.pageContent.trim().length > 0) {
+            resultPages.push({
+              pageContent: originalPage.pageContent.trim(),
+              metadata: {
+                loc: {
+                  pageNumber: pageNum,
+                },
+              },
+            } as PageContent);
+          } else {
+            skippedPages.push(pageNum);
+            console.log(`Page ${pageNum}: ⏭️ Skipped (no text available)`);
           }
         }
       }
     } else if (pagesNeedingOCR.length > 0 && !enableOCR) {
-      // OCR disabled, use original text
+      // OCR disabled, use original text if available
       console.log(`OCR disabled, using original text for ${pagesNeedingOCR.length} pages`);
       for (const pageNum of pagesNeedingOCR) {
         const originalPage = pages.find(
-          (p) => p.metadata.loc.pageNumber === pageNum
+          (p: any) => p.metadata.loc.pageNumber === pageNum
         );
-        if (originalPage) {
-          resultPages.push(originalPage as PageContent);
+        if (originalPage && originalPage.pageContent.trim().length > 0) {
+          resultPages.push({
+            pageContent: originalPage.pageContent.trim(),
+            metadata: {
+              loc: {
+                pageNumber: pageNum,
+              },
+            },
+          } as PageContent);
+        } else {
+          skippedPages.push(pageNum);
+          console.log(`Page ${pageNum}: ⏭️ Skipped (no text available)`);
         }
       }
     }
 
-    console.log(`\n=== Hybrid extraction complete: ${resultPages.length} pages processed ===`);
+    // Sort result pages by page number
+    resultPages.sort((a, b) => a.metadata.loc.pageNumber - b.metadata.loc.pageNumber);
+
+    console.log(`\n=== Hybrid extraction complete ===`);
+    console.log(`✅ Processed: ${resultPages.length} pages with text`);
+    if (skippedPages.length > 0) {
+      console.log(`⏭️ Skipped: ${skippedPages.length} image-only or empty pages (${skippedPages.join(", ")})`);
+    }
+    
+    // Ensure we have at least some content
+    if (resultPages.length === 0) {
+      throw new Error("No text content could be extracted from the PDF. The document may contain only images or be unreadable.");
+    }
+    
     return resultPages;
   } catch (error) {
     console.error("Error in hybrid extraction:", error);
-    // If standard extraction fails completely, try OCR as last resort
+    // If standard extraction fails completely, try OCR as last resort (only if enabled)
     if (enableOCR) {
       try {
         console.log("Text extraction failed completely, attempting full OCR fallback...");
         const ocrPages = await extractTextWithTesseract(pdfPath, ocrLanguage);
-        console.log(`Full OCR fallback extracted ${ocrPages.length} pages`);
-        return ocrPages;
+        // Filter out empty pages
+        const validOcrPages = ocrPages.filter((p: PageContent) => p.pageContent.trim().length > 0);
+        console.log(`Full OCR fallback extracted ${validOcrPages.length} pages with text`);
+        
+        if (validOcrPages.length === 0) {
+          throw new Error("No text content could be extracted from the PDF using OCR. The document may contain only images.");
+        }
+        
+        return validOcrPages;
       } catch (ocrError) {
         console.error("OCR fallback also failed:", ocrError);
         throw new Error(
-          `Both text extraction and OCR failed. Text extraction error: ${error instanceof Error ? error.message : String(error)}. OCR error: ${ocrError instanceof Error ? ocrError.message : String(ocrError)}`
+          `Both text extraction and OCR failed. Text extraction error: ${error instanceof Error ? error.message : String(error)}. OCR error: ${ocrError instanceof Error ? ocrError.message : String(ocrError)}. The PDF may contain only images or be corrupted.`
         );
       }
     } else {

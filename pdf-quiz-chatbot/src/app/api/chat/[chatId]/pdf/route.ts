@@ -40,27 +40,73 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cha
 
     console.log("Extracting text from PDF (with OCR fallback)...");
     // Use hybrid approach: try text extraction first, fallback to OCR for scanned PDFs
-    // OCR will automatically fall back to text extraction if it fails
+    // Images are automatically skipped - only text content will be extracted
     const pages = await extractTextHybrid(tempFilePath, {
       minTextLength: 50,
       ocrLanguage: "eng", // Default to English, can be made configurable
       enableOCR: true, // OCR enabled - will gracefully fallback if unavailable
+      skipImageOnlyPages: true, // Skip pages that contain only images
     });
 
     await fs.unlink(tempFilePath);
 
+    // Validate that we have pages with content
+    if (!pages || pages.length === 0) {
+      return NextResponse.json(
+        { error: "No text content could be extracted from the PDF. The document may contain only images or be unreadable." },
+        { status: 400 }
+      );
+    }
+
+    // Filter out any pages with empty or invalid content
+    const validPages = pages.filter(
+      (page) => page.pageContent && page.pageContent.trim().length > 0
+    );
+
+    if (validPages.length === 0) {
+      return NextResponse.json(
+        { error: "No valid text content found in the PDF after processing. The document may contain only images." },
+        { status: 400 }
+      );
+    }
+
+    console.log(`Processing ${validPages.length} pages with text content (${pages.length - validPages.length} pages skipped)`);
+
     const textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
     const chunks: DocumentChunk[] = [];
 
-    for (const page of pages) {
+    for (const page of validPages) {
+      // Clean the page content before splitting
+      const cleanedContent = page.pageContent.trim().replace(/\n+/g, " ").replace(/\s+/g, " ");
+      
+      if (cleanedContent.length === 0) {
+        continue; // Skip empty pages
+      }
+
       const splitDocs = await textSplitter.splitDocuments([{
-        pageContent: page.pageContent.replace(/\n/g, ""),
+        pageContent: cleanedContent,
         metadata: { pageNumber: page.metadata.loc.pageNumber },
       }]);
       chunks.push(...(splitDocs as DocumentChunk[]));
     }
 
-    const texts = chunks.map((chunk) => chunk.pageContent);
+    // Validate chunks
+    if (chunks.length === 0) {
+      return NextResponse.json(
+        { error: "No text chunks could be created from the PDF content." },
+        { status: 400 }
+      );
+    }
+
+    const texts = chunks.map((chunk) => chunk.pageContent).filter((text) => text && text.trim().length > 0);
+    
+    if (texts.length === 0) {
+      return NextResponse.json(
+        { error: "No valid text content could be extracted from the PDF." },
+        { status: 400 }
+      );
+    }
+
     const embeddings = await generateEmbeddings(texts);
 
     const pinecone = new Pinecone({
@@ -88,12 +134,43 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cha
     console.log(`Sample vector metadata:`, pineconeVectors[0]?.metadata);
 
     // Store PDF context in the chat
-    await prisma.chatContext.create({
-      data: {
-        chatId,
-        context: texts.join("\n"),
-      },
-    });
+    // Join texts and ensure it's not too large for the database
+    const contextText = texts.join("\n").trim();
+    
+    if (!contextText || contextText.length === 0) {
+      console.warn("Warning: Context text is empty, skipping database storage");
+    } else {
+      try {
+        // Check if context already exists for this chat
+        const existingContext = await prisma.chatContext.findFirst({
+          where: { chatId },
+        });
+
+        if (existingContext) {
+          // Update existing context
+          await prisma.chatContext.update({
+            where: { id: existingContext.id },
+            data: {
+              context: contextText,
+            },
+          });
+          console.log(`Updated existing context for chat ${chatId}`);
+        } else {
+          // Create new context
+          await prisma.chatContext.create({
+            data: {
+              chatId,
+              context: contextText,
+            },
+          });
+          console.log(`Created new context for chat ${chatId}`);
+        }
+      } catch (dbError) {
+        console.error("Error storing context in database:", dbError);
+        // Don't fail the entire request if context storage fails
+        // The vectors are already stored in Pinecone, which is more important
+      }
+    }
 
     // Wait for Pinecone indexing with retry mechanism
     let vectorsAvailable = false;
