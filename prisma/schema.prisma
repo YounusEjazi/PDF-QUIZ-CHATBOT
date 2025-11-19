@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  firstName     String?   // For manual registration
+  lastName      String?   // For manual registration
+  name          String?   // Optional, populated by Google or combined manually
+  email         String?   @unique
+  password      String?   // For manual registration
+  emailVerified DateTime?
+  image         String?
+  bio           String?   // User biography
+  role          UserRole  @default(USER) // User role (admin, user, etc.)
+  preferences   Json?     // User preferences (theme, notifications, etc.)
+  
+  // Quiz and Game Statistics
+  totalPoints     Int      @default(0)  // Total points earned
+  quizzesTaken    Int      @default(0)  // Number of quizzes completed
+  averageScore    Float?   // Average quiz score
+  bestScore       Float?   // Best quiz score
+  totalCorrect    Int      @default(0)  // Total correct answers
+  totalQuestions  Int      @default(0)  // Total questions attempted
+  winStreak      Int      @default(0)  // Current winning streak
+  bestStreak     Int      @default(0)  // Best winning streak
+  
+  // Activity Tracking
+  lastActive     DateTime  @default(now()) // Last activity timestamp
+  lastQuizDate   DateTime? // Last quiz taken date
+  studyTime      Int      @default(0)  // Total study time in minutes
+  
+  // Social Features
+  badges         String[]  @default([]) // Achievement badges
+  level          Int      @default(1)  // User level
+  experience     Int      @default(0)  // XP points
+  
+  // Relationships
+  games         Game[]    // Relation to games
+  chats         Chat[]    // Relation to chats
+  accounts      Account[] // Relation to accounts
+  sessions      Session[] // Relation to sessions
+  feedback      Feedback[] // Relation to feedback
+  
+  // Subscription and Status
+  isPro         Boolean   @default(false) // Subscription status
+  proExpiryDate DateTime? // Pro subscription expiry date
+  
+  // Metadata
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  MODERATOR
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum GameType {
+  mcq
+  open_ended
+}
+
+model Game {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions   Question[] // Relation to questions
+  topic       String
+  gameType    GameType
+  timeStarted DateTime
+  timeEnded   DateTime?
+  score       Float?     // Final score for the game
+  totalTime   Int?      // Time taken in seconds
+  difficulty  String?   // Game difficulty level
+  selectedPages Int[]   // Array of selected page numbers
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model Question {
+  id                String   @id @default(cuid())
+  question          String
+  answer            String
+  gameId            String
+  game              Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  options           Json?    // For MCQ questions
+  percentageCorrect Float?   // For open-ended questions
+  isCorrect         Boolean? // For MCQ questions
+  questionType      GameType
+  userAnswer        String?
+  timeTaken        Int?     // Time taken to answer in seconds
+  difficulty       String?  // Question difficulty
+  createdAt         DateTime @default(now())
+
+  @@index([gameId])
+}
+
+model topic_count {
+  id        String   @id @default(cuid())
+  topic     String   @unique
+  count     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Chat {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pdfUrl        String?         // Optional URL for associated PDF
+  name          String?         // Name of the chat, references the first message content
+  messages      Message[]       // Relation to messages
+  embeddings    PDFEmbedding[]  // Relation to embeddings
+  contexts      ChatContext[]   // Relation to ChatContext
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+}
+
+model ChatContext {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  context   String   // Text content extracted from the PDF
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    String   // "user" or "bot"
+  content   String   // The message content
+  createdAt DateTime @default(now())
+
+  @@index([chatId])
+}
+
+model PDFEmbedding {
+  id         String   @id @default(cuid())
+  chatId     String   // Links to the chat that the embedding is associated with
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  pineconeId String   // ID of the vector in Pinecone
+  pdfUrl     String?  // URL of the PDF if applicable
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([chatId])
+}
+
+model Feedback {
+  id        String    @id @default(cuid())
+  content   String
+  rating    Int       @default(5)
+  category  String    @default("General Feedback")
+  isAnonymous Boolean @default(false)
+  userId    String?
+  userEmail String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}

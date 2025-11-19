@@ -1,0 +1,13 @@
+services:
+  app:
+    build:
+      context: .               # Build from the pdf-quiz-chatbot directory
+      dockerfile: Dockerfile   # Use the Dockerfile in the current directory
+    ports:
+      - "3000:3000"            # Map container port 3000 to local port 3000
+    env_file:
+      - ./.env                 # Use .env file in the current directory
+    volumes:
+      - .:/app                 # Mount the current directory to /app inside the container
+      - /app/node_modules      # Exclude node_modules from volume mount to preserve container's installed dependencies
+    working_dir: /app
