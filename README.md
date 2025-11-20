@@ -1,6 +1,6 @@
 ## Team
 
-Dieses Projekt wurde gemeinsam entwickelt von:
+This Project was made as a part of Bacholar-Thesis by University of Siegen Students
 
 - **Younus Ejazi**
 - **Mustapha Lahmar**
